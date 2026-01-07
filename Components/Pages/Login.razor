@@ -1,0 +1,94 @@
+﻿@page "/login"
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@inject NavigationManager NavManager
+@using SistemaAduanero.Web.Models
+@using SistemaAduanero.Web.Auth
+@using Blazored.LocalStorage
+@layout SistemaAduanero.Web.Components.Layout.LoginLayout
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILocalStorageService LocalStorage
+@inject NavigationManager NavManager
+@rendermode InteractiveServer
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4>Iniciar Sesión</h4>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(mensajeError))
+                {
+                    <div class="alert alert-danger">@mensajeError</div>
+                }
+
+                <div class="mb-3">
+                    <label>Usuario</label>
+                    <input @bind="loginModel.Username" class="form-control" placeholder="Ej: ADMIN" />
+                </div>
+                <div class="mb-3">
+                    <label>Contraseña</label>
+                    <input @bind="loginModel.Password" type="password" class="form-control" placeholder="******" />
+                </div>
+
+                <button class="btn btn-success w-100" @onclick="IniciarSesion">Ingresar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginDto loginModel = new LoginDto();
+    private string mensajeError;
+    private bool estaCargando = false;
+    private async Task IniciarSesion()
+    {
+        // Activamos el modo carga
+        estaCargando = true;
+        mensajeError = null;
+
+
+
+        try
+        {
+            // 1. Llamamos a la API
+            var respuesta = await Http.PostAsJsonAsync("api/Auth/login", loginModel);
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                // 2. Leemos el Token que nos mandó la API
+                var resultado = await respuesta.Content.ReadFromJsonAsync<RespuestaToken>();
+
+                // 3. Guardamos en LocalStorage
+                await LocalStorage.SetItemAsync("authToken", resultado.token);
+
+                // 4. Avisamos al sistema que ya estamos logueados
+                ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(resultado.token);
+
+                // 5. Redirigimos al inicio
+                NavManager.NavigateTo("/");
+            }
+            else
+            {
+                mensajeError = "Usuario o contraseña incorrectos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            estaCargando = false;
+        }
+    }
+
+    // Clasecita interna para leer la respuesta JSON { "token": "..." }
+    public class RespuestaToken
+    {
+        public string token { get; set; }
+    }
+}
