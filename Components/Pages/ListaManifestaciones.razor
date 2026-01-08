@@ -1,5 +1,6 @@
 ﻿@page "/manifestaciones"
 @using SistemaAduanero.Web.Models
+@inject SweetAlertService Swal
 
 @using Microsoft.AspNetCore.Authorization
 @inject HttpClient Http
@@ -8,12 +9,16 @@
 @attribute [Authorize]
 
 <div class="container mt-4">
-    <h3>Listado de Manifestaciones de Valor</h3>
+    
+    <h3> <i class="bi bi-card-list"></i> Listado de Manifestaciones de Valor</h3>
     <p class="text-muted">Gestión de trámites aduaneros VUCEM</p>
 
     <div class="text-end mb-3">
-        <button class="btn btn-primary">+ Nueva Manifestación</button>
+        <a href="manifestaciones/nueva" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nueva
+        </a>
     </div>
+
 
     @if (manifestaciones == null)
     {
@@ -43,7 +48,9 @@
                         <td>@item.ManifestacionId</td>
                         <td>@item.NumeroPedimento</td>
                         <td>@item.Cove</td>
-                        <td>@item.TotalValorAduana.ToString("C")</td>
+                        <td>
+                            @item.TotalValorAduana.ToString("C2", System.Globalization.CultureInfo.CreateSpecificCulture("es-MX"))
+                        </td>
                         <td>
                             <span class="badge @(item.EstadoEnvio == "BORRADOR" ? "bg-warning" : "bg-success")">
                                 @item.EstadoEnvio
@@ -53,11 +60,11 @@
                             <div class="btn-group" role="group">
 
                                 <a href="manifestaciones/editar/@item.ManifestacionId" class="btn btn-outline-primary btn-sm" title="Editar Expediente">
-                                    ✏️
+                                    <i class="bi bi-pencil-square"></i>
                                 </a>
 
                                 <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => EliminarManifestacion(item.ManifestacionId)" title="Eliminar Expediente">
-                                    🗑️
+                                    <i class="bi bi-trash3-fill"></i>
                                 </button>
 
                             </div>
@@ -93,7 +100,22 @@
     private async Task EliminarManifestacion(int id)
     {
         // 1. Confirmación sencilla con JavaScript (opcional)
-        bool confirmado = await JsRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro de eliminar este expediente? Se borrarán también sus COVEs.");
+        //bool confirmado = await JsRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro de eliminar este expediente? Se borrarán también sus COVEs.");
+
+        // 1. Recibes el objeto completo (NO es un bool todavía)
+       
+
+        var resultado = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Advertencia",
+            Text = "¿Estás seguro de eliminar este expediente? Se borrarán también sus COVEs.",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            CancelButtonColor = "#d33",
+            CancelButtonText= "Cancelar",
+            ConfirmButtonText = "Confirmar"
+        });
+        bool confirmado = resultado.IsConfirmed;
 
         if (confirmado)
         {

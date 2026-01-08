@@ -1,7 +1,7 @@
 ﻿@page "/manifestaciones/nueva"
 @page "/manifestaciones/editar/{Id:int}" 
 @using SistemaAduanero.Shared.DTOs
-
+@inject SweetAlertService Swal
 @inject HttpClient Http
 @inject NavigationManager NavManager
 @rendermode InteractiveServer
@@ -12,7 +12,7 @@
 <div class="container mt-4">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">📁 Nuevo Expediente de Valor</h4>
+            <h4 class="mb-0">Nuevo Expediente de Valor</h4>
         </div>
         <div class="card-body">
             <div class="row g-3">
@@ -30,7 +30,7 @@
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <button class="btn btn-outline-success w-100" @onclick="GuardarTodo">
-                        💾 Guardar Expediente
+                       <i class="bi bi-floppy"></i> Guardar Expediente
                     </button>
                 </div>
             </div>
@@ -39,9 +39,9 @@
 
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="text-secondary m-0">📄 Documentos COVE / Facturas</h5>
+            <h5 class="text-secondary m-0">Documentos COVE / Facturas</h5>
             <button class="btn btn-primary" @onclick="AbrirModalNuevo">
-                + Agregar COVE
+                <i class="bi bi-plus-circle"></i> Agregar COVE
             </button>
         </div>
         <div class="card-body p-0">
@@ -54,8 +54,8 @@
             }
             else
             {
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="table table-striped table-hover shadow-sm">
+                    <thead class="table-dark">
                         <tr>
                             <th>COVE (E-Doc)</th>
                             <th>Pedimento</th>
@@ -70,21 +70,28 @@
                         {
                             <tr>
                                 <td>@item.NumeroCove</td>
+
                                 <td>@item.NumeroPedimento</td>
-                                <td>@item.Incoterm</td>
-                                <td class="text-end">@item.TotalValorAduana.ToString("C2")</td>
+
+                                <td>@(item.Aduana) / @(item.Patente)</td>
+
+                                <td>@(item.FechaPago.ToShortDateString() ?? "-")</td>
+
+                                <td>@item.TotalValorAduana.ToString("C2", System.Globalization.CultureInfo.CreateSpecificCulture("es-MX"))</td>
+
+
                                 <td class="text-center">
                                     <div class="btn-group">
                                         <button type="button" class="btn btn-sm btn-outline-primary"
                                                 @onclick="() => CargarDatosParaEditar(item)"
                                                 title="Editar COVE">
-                                            ✏️
+                                            <i class="bi bi-pencil-square"></i>
                                         </button>
 
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 @onclick="() => EliminarCove(item)"
                                                 title="Eliminar">
-                                            🗑️
+                                            <i class="bi bi-trash3-fill"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -132,7 +139,14 @@
                                     <InputText class="form-control" @bind-Value="coveTemporal.NumeroCove" placeholder="Ej: COVE257..." />
 
                                     <label class="form-label mt-2">Incoterm</label>
-                                    <InputText class="form-control" @bind-Value="coveTemporal.Incoterm" />
+                                    <InputSelect class="form-select" @bind-Value="coveTemporal.Incoterm">
+                                        <option value="">-- Seleccione --</option>
+                                        @foreach (var item in ListaIncoterms)
+                                        {
+                                            @* Mostramos "CLAVE - DESCRIPCION" para que sea claro *@
+                                            <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
+                                        }
+                                    </InputSelect>
 
                                     <label class="form-label mt-2">Vinculación</label>
                                     <InputSelect class="form-select" @bind-Value="coveTemporal.ExisteVinculacion">
@@ -141,7 +155,14 @@
                                     </InputSelect>
 
                                     <label class="form-label mt-2">M. Valoración</label>
-                                    <InputText class="form-control" @bind-Value="coveTemporal.MetodoValoracion" />
+                                    <InputSelect class="form-select" @bind-Value="coveTemporal.MetodoValoracion">
+                                        <option value="">-- Seleccione --</option>
+                                        @foreach (var item in ListaMetodosValoracion)
+                                        {
+                                            <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
+                                        }
+                                    </InputSelect>
+
                                 </div>
 
                                 <div class="col-md-4 border-end">
@@ -163,7 +184,18 @@
                                     <label class="form-label mt-3 fw-bold">Datos de Pago</label>
                                     <div class="row">
                                         <div class="col-6"><label class="small">Fecha</label><InputDate class="form-control form-control-sm" @bind-Value="coveTemporal.FechaPago" /></div>
-                                        <div class="col-6"><label class="small">T.Pago</label><InputText class="form-control form-control-sm" @bind-Value="coveTemporal.TipoPago" /></div>
+
+                                        <div class="col-6">
+                                            <label class="small">T. Pago</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.TipoPago">
+                                                <option value="">-- Seleccione --</option>
+                                                @foreach (var item in ListaFormasPago)
+                                                {
+                                                    <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+
                                         <div class="col-4 mt-2"><label class="small">Moneda</label><InputText class="form-control form-control-sm" @bind-Value="coveTemporal.MonedaPago" /></div>
                                         <div class="col-4 mt-2"><label class="small">TC</label><InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.TipoCambioPago" /></div>
                                         <div class="col-4 mt-2"><label class="small">Total</label><InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.TotalPago" /></div>
@@ -192,10 +224,19 @@
 
                             <div class="card bg-light border-0 p-3 mb-3">
                                 <div class="row g-2 align-items-end">
+
                                     <div class="col-md-3">
-                                        <label class="small">Clave (Ej: INCRE.GS)</label>
-                                        <InputText class="form-control form-control-sm" @bind-Value="tempIncre.TipoIncrementable" />
+                                        <label class="small">Incrementable</label>
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempIncre.TipoIncrementable">
+                                            <option value="">-- Seleccione --</option>
+                                            @foreach (var item in ListaIncrementables)
+                                            {
+                                                <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
+                                            }
+                                        </InputSelect>
                                     </div>
+
+                                    
                                     <div class="col-md-3">
                                         <label class="small">Fecha Erogación</label>
                                         <InputDate class="form-control form-control-sm" @bind-Value="tempIncre.FechaErogacion" />
@@ -206,7 +247,13 @@
                                     </div>
                                     <div class="col-md-2">
                                         <label class="small">Moneda</label>
-                                        <InputText class="form-control form-control-sm" @bind-Value="tempIncre.TipoMoneda" />
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempIncre.TipoMoneda">
+                                            <option value="">-- Seleccione --</option>
+                                            @foreach (var item in ListaMonedas)
+                                            {
+                                                <option value="@item.Clave">@item.Clave </option>
+                                            }
+                                        </InputSelect>
                                     </div>
                                     <div class="col-md-2">
                                         <button type="button" class="btn btn-success btn-sm w-100" @onclick="AgregarIncrementable">
@@ -282,17 +329,29 @@
     private int tabActiva = 1; // 1 = General, 2 = Incrementables
     private IncrementableDto tempIncre = new IncrementableDto();
 
+    // === LISTAS DE CATÁLOGOS (Dinámicas desde BD) ===
+    private List<CatalogoDto> ListaIncoterms = new();
+    private List<CatalogoDto> ListaMetodosValoracion = new();
+    private List<CatalogoDto> ListaFormasPago = new();
+    private List<CatalogoDto> ListaMonedas = new(); // Esta la dejaremos estática o la puedes cargar de BD también
+    private List<CatalogoDto> ListaIncrementables = new();
+    private List<CatalogoDto> ListaDecrementables = new();
+
+
     private void AbrirModalNuevo()
     {
         coveEnEdicion = null; // IMPORTANTE: Reseteamos para que sepa que es NUEVO
         coveTemporal = new CoveDetalleDto();
         // Valores por defecto del XML
-        coveTemporal.MonedaPago = "USD";
-        coveTemporal.MetodoValoracion = "VALADU.VTM";
-        coveTemporal.TipoPago = "FORPAG.TE";
+        coveTemporal.Incoterm = "";
+        coveTemporal.MetodoValoracion = "";
+        coveTemporal.TipoPago = "";
+        coveTemporal.MonedaPago = "";
 
         // Reiniciamos incrementables
         tempIncre = new IncrementableDto();
+        tempIncre.TipoIncrementable = "";
+        tempIncre.TipoMoneda = "";
         tabActiva = 1; // Siempre abrir en la primera pestaña
 
         mostrarModal = true;
@@ -349,12 +408,26 @@
         // 1. Validaciones
         if (string.IsNullOrEmpty(manifestacion.ReferenciaAdmin))
         {
-            Console.WriteLine("Falta la referencia"); // Idealmente usa una alerta visual
+            await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Falta información",
+                Text = "El campo 'Referencia / Pedimento' es obligatorio.",
+                Icon = SweetAlertIcon.Warning,
+                ConfirmButtonText = "Entendido"
+            });
             return;
+            
         }
         if (manifestacion.Coves.Count == 0)
         {
-            Console.WriteLine("Debes agregar al menos un COVE");
+
+            await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¡Atención!",
+                Text = "Debe agregar al menos un COVE (Factura) antes de guardar.",
+                Icon = SweetAlertIcon.Error,
+                ConfirmButtonText = "Corregir"
+            });
             return;
         }
 
@@ -377,17 +450,18 @@
             // 3. Procesar Respuesta
             if (respuesta.IsSuccessStatusCode)
             {
+                await Swal.FireAsync("¡Guardado!", "El expediente se registró correctamente.", SweetAlertIcon.Success);
                 NavManager.NavigateTo("/manifestaciones");
             }
             else
             {
                 var error = await respuesta.Content.ReadAsStringAsync();
-                Console.WriteLine($"Error del servidor: {error}");
+                await Swal.FireAsync("Error", $"No se pudo guardar: {error}", SweetAlertIcon.Error);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error de conexión: {ex.Message}");
+            await Swal.FireAsync("Error de Conexión", ex.Message, SweetAlertIcon.Error);
         }
     }
 
@@ -414,6 +488,22 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // 1. Cargar Catálogos en paralelo para que sea rápido
+        var t1 = CargarCatalogo("api/catalogos/incoterms", l => ListaIncoterms = l);
+        var t2 = CargarCatalogo("api/catalogos/metodos-valoracion", l => ListaMetodosValoracion = l);
+        var t3 = CargarCatalogo("api/catalogos/formas-pago", l => ListaFormasPago = l);
+        var t4 = CargarCatalogo("api/catalogos/incrementables", l => ListaIncrementables = l);
+        var t5 = CargarCatalogo("api/catalogos/decrementables", l => ListaDecrementables = l);
+
+        // Monedas comunes (si no creaste tabla, usamos esta lista manual)
+        ListaMonedas = new List<CatalogoDto> {
+            new(){ Clave="MXN", Descripcion="MXN - Peso Mexicano"},
+            new(){ Clave="USD", Descripcion="USD - Dólar Americano"},
+            new(){ Clave="EUR", Descripcion="EUR - Euro"}
+        };
+
+        await Task.WhenAll(t1, t2, t3, t4, t5);
+
         if (Id.HasValue) // Si venimos de "Editar"
         {
             var resultado = await Http.GetFromJsonAsync<ManifestacionDto>($"api/ManifestacionesValor/{Id}");
@@ -452,5 +542,26 @@
                 }
             }
         }
+    }
+
+
+    // Helper para cargar catálogos y evitar errores si la API falla
+    private async Task CargarCatalogo(string url, Action<List<CatalogoDto>> setter)
+    {
+        try
+        {
+            var resultado = await Http.GetFromJsonAsync<List<CatalogoDto>>(url);
+            if (resultado != null) setter(resultado);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando catálogo {url}: {ex.Message}");
+        }
+    }
+
+    public class CatalogoDto
+    {
+        public string Clave { get; set; } = "";
+        public string Descripcion { get; set; } = "";
     }
 }

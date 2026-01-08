@@ -1,8 +1,10 @@
-using SistemaAduanero.Web.Components;
 using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using SistemaAduanero.Web.Auth;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using SistemaAduanero.Web.Components;
+using CurrieTechnologies.Razor.SweetAlert2;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
     }); builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSweetAlert2();
 
 var app = builder.Build();
 
