@@ -1,6 +1,7 @@
 ﻿@page "/manifestaciones/nueva"
-@page "/manifestaciones/editar/{Id:int}" 
+@page "/manifestaciones/editar/{Id:int}"
 @using SistemaAduanero.Shared.DTOs
+@using SistemaAduanero.Shared.DTOs.SistemaAduanero.Shared.DTOs
 @inject SweetAlertService Swal
 @inject HttpClient Http
 @inject NavigationManager NavManager
@@ -9,309 +10,641 @@
 @using System.Text.Json
 @attribute [Authorize]
 
-<div class="container mt-4">
+<div class="container-fluid mt-4">
+
+    @* === CABECERA PRINCIPAL Y DATOS GENERALES === *@
     <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Nuevo Expediente de Valor</h4>
+        @* Header Estandarizado *@
+        <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-folder-fill"></i>
+                <h6 class="mb-0 fw-bold text-uppercase">Expediente de Valor</h6>
+            </div>
+            <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="GuardarTodo">
+                <i class="bi bi-floppy-fill"></i> GUARDAR EXPEDIENTE
+            </button>
         </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-bold">Referencia Administrativa / Pedimento</label>
-                    <InputText class="form-control" @bind-Value="manifestacion.ReferenciaAdmin" placeholder="Ej: IMP-2025-001 o 5023720" />
-                    <small class="text-muted">Identificador principal de este expediente.</small>
-                </div>
+
+        <div class="card-body bg-white">
+            @* FILA 1: DATOS DE IDENTIFICACIÓN *@
+            <div class="row g-3 mb-4">
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Tipo Operación</label>
-                    <select class="form-select" @bind="manifestacion.TipoOperacion">
-                        <option value="I">Importación</option>
-                        <option value="E">Exportación</option>
-                    </select>
+                    <label class="form-label small fw-bold text-muted">NÚMERO PEDIMENTO</label>
+                    <InputText class="form-control form-control-sm fw-bold text-primary" @bind-Value="manifestacion.ReferenciaAdmin" placeholder="Ej: 5000001" />
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-outline-success w-100" @onclick="GuardarTodo">
-                       <i class="bi bi-floppy"></i> Guardar Expediente
-                    </button>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">CLIENTE / IMPORTADOR *</label>
+
+                    @* Usamos un SELECT en lugar de escribir *@
+                    <InputSelect class="form-select form-select-sm"
+                                 Value="clienteSeleccionadoId"
+                                 ValueChanged="@((int id) => OnClienteSeleccionado(id))"
+                                 ValueExpression="@(() => clienteSeleccionadoId)">
+
+                        <option value="0">-- Seleccione Cliente --</option>
+                        @if (ListaMisClientes != null)
+                        {
+                            @foreach (var cte in ListaMisClientes)
+                            {
+                                // Mostramos Razon Social + RFC para que sea claro
+                                <option value="@cte.ClienteId">@cte.RazonSocial (@cte.RFC)</option>
+                            }
+                        }
+                    </InputSelect>
+                </div>
+
+                @* Campos de solo lectura para confirmar visualmente *@
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">RFC SELECCIONADO</label>
+                    <input class="form-control form-control-sm bg-light" value="@manifestacion.Cliente?.RFC" readonly />
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-light border d-flex align-items-center p-2 mb-0 small text-muted">
+                        <i class="bi bi-info-circle-fill text-info me-2 fs-5"></i>
+                        <div>
+                            <strong>Nota:</strong> Ingrese los totales globales tal como aparecen en el pedimento.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* SECCIÓN DE TOTALES (Diseño "Caja Gris" limpia) *@
+            <div class="p-3 bg-light rounded border">
+                <h6 class="text-primary fw-bold text-uppercase mb-3" style="font-size: 0.8rem;">
+                    <i class="bi bi-calculator"></i> Totales (Valor en Aduana)
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">PRECIO PAGADO</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-muted">$</span>
+                            <InputNumber class="form-control text-end" @bind-Value="manifestacion.TotalPrecioPagado" />
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">PRECIO POR PAGAR</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-muted">$</span>
+                            <InputNumber class="form-control text-end" @bind-Value="manifestacion.TotalPrecioPorPagar" />
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">INCREMENTABLES</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-muted">$</span>
+                            <InputNumber class="form-control text-end" @bind-Value="manifestacion.TotalIncrementables" />
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">DECREMENTABLES</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-muted">$</span>
+                            <InputNumber class="form-control text-end" @bind-Value="manifestacion.TotalDecrementables" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-success">TOTAL VALOR ADUANA</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-success text-white border-success">$</span>
+                            <InputNumber class="form-control fw-bold text-end border-success text-success" @bind-Value="manifestacion.TotalValorAduana" />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="text-secondary m-0">Documentos COVE / Facturas</h5>
-            <button class="btn btn-primary" @onclick="AbrirModalNuevo">
-                <i class="bi bi-plus-circle"></i> Agregar COVE
-            </button>
-        </div>
-        <div class="card-body p-0">
-            @if (manifestacion.Coves.Count == 0)
-            {
-                <div class="text-center p-5 text-muted">
-                    <p>No hay COVEs registrados en este expediente.</p>
-                    <small>Haz clic en "Agregar COVE" para capturar la información del XML.</small>
+    <div class="row g-4">
+        @* === SECCIÓN IZQUIERDA: RFCs CONSULTA === *@
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-2 border-bottom">
+                    <h6 class="mb-0 fw-bold text-secondary text-uppercase"><i class="bi bi-people-fill"></i> Personas Consulta</h6>
                 </div>
-            }
-            else
-            {
-                <table class="table table-striped table-hover shadow-sm">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>COVE (E-Doc)</th>
-                            <th>Pedimento</th>
-                            <th>Aduana/Patente</th>
-                            <th>Fecha Pago</th>
-                            <th class="text-end">Valor Aduana</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in manifestacion.Coves)
+                <div class="card-body bg-light">
+                    @* Formulario Agregar RFC *@
+                    <div class="card p-3 mb-3 border-0 shadow-sm">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-muted">RFC CONSULTA</label>
+                                <InputText class="form-control form-control-sm" @bind-Value="tempRfc.RfcConsulta" placeholder="Capturar RFC..." />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-muted">TIPO FIGURA</label>
+                                <InputSelect class="form-select form-select-sm" @bind-Value="tempRfc.TipoFigura">
+                                    <option value="">-- Seleccione --</option>
+                                    @foreach (var tf in ListaTiposFigura)
+                                    {
+                                        <option value="@tf.Clave">@tf.Clave - @tf.Descripcion</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <button class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarRfcConsulta">
+                                    <i class="bi bi-plus-lg"></i> AGREGAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Lista Standard *@
+                    <ul class="list-group list-group-flush border rounded bg-white">
+                        @foreach (var item in manifestacion.Consultas)
                         {
-                            <tr>
-                                <td>@item.NumeroCove</td>
-
-                                <td>@item.NumeroPedimento</td>
-
-                                <td>@(item.Aduana) / @(item.Patente)</td>
-
-                                <td>@(item.FechaPago.ToShortDateString() ?? "-")</td>
-
-                                <td>@item.TotalValorAduana.ToString("C2", System.Globalization.CultureInfo.CreateSpecificCulture("es-MX"))</td>
-
-
-                                <td class="text-center">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                                @onclick="() => CargarDatosParaEditar(item)"
-                                                title="Editar COVE">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-
-                                        <button type="button" class="btn btn-sm btn-outline-danger"
-                                                @onclick="() => EliminarCove(item)"
-                                                title="Eliminar">
-                                            <i class="bi bi-trash3-fill"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                                <div>
+                                    <span class="fw-bold d-block small text-dark">@item.RfcConsulta</span>
+                                    <span class="badge bg-light text-secondary border">@item.TipoFigura</span>
+                                </div>
+                                <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => manifestacion.Consultas.Remove(item)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </li>
                         }
-                    </tbody>
-                </table>
-            }
+                        @if (manifestacion.Consultas.Count == 0)
+                        {
+                            <li class="list-group-item text-center text-muted small py-3 bg-light">
+                                Sin personas asociadas.
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        @* === SECCIÓN DERECHA: LISTADO DE COVES === *@
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-2 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-secondary text-uppercase"><i class="bi bi-file-earmark-text-fill"></i> Documentos COVE</h6>
+                    <button class="btn btn-primary btn-sm fw-bold" @onclick="AbrirModalNuevo">
+                        <i class="bi bi-plus-lg"></i> NUEVO COVE
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0 small align-middle">
+                            <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
+                                <tr>
+                                    <th class="ps-3 py-2">COVE</th>
+                                    <th class="py-2">Incoterm</th>
+                                    <th class="py-2">Aduana</th>
+                                    <th class="text-center py-2">Pagos</th>
+                                    <th class="text-center py-2">Conceptos</th>
+                                    <th class="text-end pe-3 py-2">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in manifestacion.Coves)
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-bold text-primary">@item.NumeroCove</td>
+                                        <td>@item.Incoterm</td>
+                                        <td>@item.Aduana</td>
+                                        <td class="text-center">
+                                            @if (item.PreciosPagados.Any())
+                                            {
+                                                <span class="badge bg-success me-1" title="Pagados">@item.PreciosPagados.Count</span>
+                                            }
+                                            @if (item.PreciosPorPagar.Any())
+                                            {
+                                                <span class="badge bg-warning text-dark me-1" title="Por Pagar">@item.PreciosPorPagar.Count</span>
+                                            }
+                                            @if (item.Compensaciones.Any())
+                                            {
+                                                <span class="badge bg-info text-dark" title="Compensaciones">@item.Compensaciones.Count</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.Incrementables.Any())
+                                            {
+                                                <span class="badge bg-primary bg-opacity-75 me-1" title="Incrementables">+ @item.Incrementables.Count</span>
+                                            }
+                                            @if (item.Decrementables.Any())
+                                            {
+                                                <span class="badge bg-danger bg-opacity-75" title="Decrementables">- @item.Decrementables.Count</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => CargarDatosParaEditar(item)"><i class="bi bi-pencil-square"></i></button>
+                                            <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => EliminarCove(item)"><i class="bi bi-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (manifestacion.Coves.Count == 0)
+                                {
+                                    <tr><td colspan="6" class="text-center py-4 text-muted small">No hay documentos registrados. Pulse "Nuevo COVE" para comenzar.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+@* === MODAL DE CAPTURA DE COVE === *@
 @if (mostrarModal)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title">Detalle del COVE (Captura XML)</h5>
-                    <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-6 text-uppercase fw-bold">
+                        <i class="bi bi-pencil-square"></i> @(coveEnEdicion != null ? "Editar COVE" : "Nuevo COVE")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
                 </div>
 
-                <div class="modal-body">
+                <div class="modal-body bg-light">
                     <EditForm Model="@coveTemporal" OnValidSubmit="GuardarCoveEnLista">
                         <DataAnnotationsValidator />
 
-                        <ul class="nav nav-tabs mb-3">
+                        @* TABS ESTANDARIZADAS (Iconos Bootstrap) *@
+                        <ul class="nav nav-pills mb-3 bg-white p-2 rounded border shadow-sm" style="font-size: 0.9rem;">
                             <li class="nav-item">
-                                <button class="nav-link @(tabActiva == 1 ? "active" : "")" type="button" @onclick="() => tabActiva = 1">
-                                    📄 Datos Generales
+                                <button class="nav-link @(tabActiva == 1 ? "active fw-bold" : "text-muted")" type="button" @onclick="() => tabActiva = 1">
+                                    <i class="bi bi-file-earmark-text"></i> Generales
                                 </button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link @(tabActiva == 2 ? "active" : "")" type="button" @onclick="() => tabActiva = 2">
-                                    💰 Incrementables (@coveTemporal.Incrementables.Count)
+                                <button class="nav-link @(tabActiva == 2 ? "active fw-bold" : "text-muted")" type="button" @onclick="() => tabActiva = 2">
+                                    <i class="bi bi-cash-stack"></i> Pagados <span class="badge bg-light text-dark ms-1">@coveTemporal.PreciosPagados.Count</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link @(tabActiva == 3 ? "active fw-bold" : "text-muted")" type="button" @onclick="() => tabActiva = 3">
+                                    <i class="bi bi-clock-history"></i> Por Pagar <span class="badge bg-light text-dark ms-1">@coveTemporal.PreciosPorPagar.Count</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link @(tabActiva == 4 ? "active fw-bold" : "text-muted")" type="button" @onclick="() => tabActiva = 4">
+                                    <i class="bi bi-arrow-left-right"></i> Compensaciones <span class="badge bg-light text-dark ms-1">@coveTemporal.Compensaciones.Count</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link @(tabActiva == 5 ? "active fw-bold" : "text-muted")" type="button" @onclick="() => tabActiva = 5">
+                                    <i class="bi bi-calculator"></i> Conceptos +/-
                                 </button>
                             </li>
                         </ul>
 
+                        @* TAB 1: GENERALES *@
                         <div class="@(tabActiva == 1 ? "d-block" : "d-none")">
-                            <div class="row g-3">
-                                <div class="col-md-4 border-end">
-                                    <h6 class="text-primary border-bottom pb-2">Identificadores</h6>
-                                    <label class="form-label mt-2">Número COVE *</label>
-                                    <InputText class="form-control" @bind-Value="coveTemporal.NumeroCove" placeholder="Ej: COVE257..." />
-
-                                    <label class="form-label mt-2">Incoterm</label>
-                                    <InputSelect class="form-select" @bind-Value="coveTemporal.Incoterm">
-                                        <option value="">-- Seleccione --</option>
-                                        @foreach (var item in ListaIncoterms)
-                                        {
-                                            @* Mostramos "CLAVE - DESCRIPCION" para que sea claro *@
-                                            <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
-                                        }
-                                    </InputSelect>
-
-                                    <label class="form-label mt-2">Vinculación</label>
-                                    <InputSelect class="form-select" @bind-Value="coveTemporal.ExisteVinculacion">
-                                        <option value="false">NO</option>
-                                        <option value="true">SÍ</option>
-                                    </InputSelect>
-
-                                    <label class="form-label mt-2">M. Valoración</label>
-                                    <InputSelect class="form-select" @bind-Value="coveTemporal.MetodoValoracion">
-                                        <option value="">-- Seleccione --</option>
-                                        @foreach (var item in ListaMetodosValoracion)
-                                        {
-                                            <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
-                                        }
-                                    </InputSelect>
-
-                                </div>
-
-                                <div class="col-md-4 border-end">
-                                    <h6 class="text-primary border-bottom pb-2">Pedimento y Pago</h6>
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <label class="mt-2 small">Pedimento</label>
-                                            <InputText class="form-control" @bind-Value="coveTemporal.NumeroPedimento" />
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">NÚMERO COVE *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="coveTemporal.NumeroCove" />
                                         </div>
-                                        <div class="col-3">
-                                            <label class="mt-2 small">Aduana</label>
-                                            <InputNumber class="form-control" @bind-Value="coveTemporal.Aduana" />
-                                        </div>
-                                        <div class="col-3">
-                                            <label class="mt-2 small">Patente</label>
-                                            <InputNumber class="form-control" @bind-Value="coveTemporal.Patente" />
-                                        </div>
-                                    </div>
-                                    <label class="form-label mt-3 fw-bold">Datos de Pago</label>
-                                    <div class="row">
-                                        <div class="col-6"><label class="small">Fecha</label><InputDate class="form-control form-control-sm" @bind-Value="coveTemporal.FechaPago" /></div>
-
-                                        <div class="col-6">
-                                            <label class="small">T. Pago</label>
-                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.TipoPago">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">INCOTERM</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.Incoterm">
                                                 <option value="">-- Seleccione --</option>
-                                                @foreach (var item in ListaFormasPago)
+                                                @foreach (var item in ListaIncoterms)
                                                 {
                                                     <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
                                                 }
                                             </InputSelect>
                                         </div>
-
-                                        <div class="col-4 mt-2"><label class="small">Moneda</label><InputText class="form-control form-control-sm" @bind-Value="coveTemporal.MonedaPago" /></div>
-                                        <div class="col-4 mt-2"><label class="small">TC</label><InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.TipoCambioPago" /></div>
-                                        <div class="col-4 mt-2"><label class="small">Total</label><InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.TotalPago" /></div>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-4 bg-light p-3 rounded">
-                                    <h6 class="text-primary border-bottom pb-2">Totales (Valor Aduana)</h6>
-                                    <label class="small mt-2">Precio Pagado</label>
-                                    <InputNumber class="form-control" @bind-Value="coveTemporal.TotalPrecioPagado" />
-
-                                    <label class="small mt-2">Incrementables (+)</label>
-                                    <InputNumber class="form-control text-primary" @bind-Value="coveTemporal.TotalIncrementables" />
-
-                                    <label class="small mt-2">Decrementables (-)</label>
-                                    <InputNumber class="form-control text-danger" @bind-Value="coveTemporal.TotalDecrementables" />
-
-                                    <hr />
-                                    <label class="fw-bold">TOTAL VALOR ADUANA</label>
-                                    <InputNumber class="form-control fw-bold fs-5" @bind-Value="coveTemporal.TotalValorAduana" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="@(tabActiva == 2 ? "d-block" : "d-none")">
-
-                            <div class="card bg-light border-0 p-3 mb-3">
-                                <div class="row g-2 align-items-end">
-
-                                    <div class="col-md-3">
-                                        <label class="small">Incrementable</label>
-                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempIncre.TipoIncrementable">
-                                            <option value="">-- Seleccione --</option>
-                                            @foreach (var item in ListaIncrementables)
-                                            {
-                                                <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
-                                            }
-                                        </InputSelect>
-                                    </div>
-
-                                    
-                                    <div class="col-md-3">
-                                        <label class="small">Fecha Erogación</label>
-                                        <InputDate class="form-control form-control-sm" @bind-Value="tempIncre.FechaErogacion" />
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="small">Importe</label>
-                                        <InputNumber class="form-control form-control-sm" @bind-Value="tempIncre.Importe" />
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="small">Moneda</label>
-                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempIncre.TipoMoneda">
-                                            <option value="">-- Seleccione --</option>
-                                            @foreach (var item in ListaMonedas)
-                                            {
-                                                <option value="@item.Clave">@item.Clave </option>
-                                            }
-                                        </InputSelect>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="button" class="btn btn-success btn-sm w-100" @onclick="AgregarIncrementable">
-                                            + Agregar
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="row mt-2">
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <InputCheckbox class="form-check-input" @bind-Value="tempIncre.ACargoImportador" id="checkCargo" />
-                                            <label class="form-check-label small" for="checkCargo">¿A cargo del Importador?</label>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">VINCULACIÓN</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.ExisteVinculacion">
+                                                <option value="false">NO</option>
+                                                <option value="true">SÍ</option>
+                                            </InputSelect>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">MÉTODO VALORACIÓN</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.MetodoValoracion">
+                                                <option value="">-- Seleccione --</option>
+                                                @foreach (var item in ListaMetodosValoracion)
+                                                {
+                                                    <option value="@item.Clave">@item.Clave - @item.Descripcion</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">ADUANA</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.Aduana" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">PATENTE</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.Patente" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">PEDIMENTO INTERNO</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="coveTemporal.NumeroPedimento" />
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            @if (coveTemporal.Incrementables.Count > 0)
-                            {
-                                <table class="table table-sm table-bordered table-striped">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>Tipo</th>
-                                            <th>Fecha</th>
-                                            <th class="text-end">Importe</th>
-                                            <th>Moneda</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
+                        @* TAB 2: PAGADOS *@
+                        <div class="@(tabActiva == 2 ? "d-block" : "d-none")">
+                            <div class="p-3 bg-white rounded border mb-3 shadow-sm">
+                                <div class="row g-2 align-items-end">
+
+                                    <div class="col-md-3"><label class="form-label small fw-bold text-muted">FECHA</label><InputDate class="form-control form-control-sm" @bind-Value="tempPagado.FechaPago" /></div>
+                                    <div class="col-md-3"><label class="form-label small fw-bold text-muted">TOTAL</label><InputNumber class="form-control form-control-sm" @bind-Value="tempPagado.Total" /></div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small fw-bold text-muted">MONEDA</label>
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempPagado.TipoMoneda">
+                                            <option value="">-- Selecione --</option>
+                                            @foreach (var m in ListaMonedas)
+                                            {
+                                                <option value="@m.Clave">@m.Clave - @m.Descripcion</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-2"><label class="form-label small fw-bold text-muted">T.C.</label><InputNumber class="form-control form-control-sm" @bind-Value="tempPagado.TipoCambio" /></div>
+                                    <div class="col-md-2"><button type="button" class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarPagado"><i class="bi bi-plus-lg"></i> AGREGAR</button></div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <label class="form-label small fw-bold text-muted">FORMA PAGO *</label>
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempPagado.TipoPago">
+                                            <option value="">-- Seleccione --</option>
+                                            @foreach (var fp in ListaFormasPago)
+                                            {
+                                                <option value="@fp.Clave">@fp.Clave - @fp.Descripcion</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* Tabla Estandarizada *@
+                            <div class="table-responsive border rounded bg-white">
+                                <table class="table table-sm table-striped table-hover mb-0 small">
+                                    <thead class="table-light text-uppercase text-muted" style="font-size:0.75rem;"><tr><th class="py-2">Fecha</th><th class="py-2">Forma Pago</th><th class="text-center py-2">Moneda</th><th class="text-end py-2">TC</th><th class="text-end py-2">Total</th><th class="text-center py-2">Acción</th></tr></thead>
                                     <tbody>
-                                        @foreach (var inc in coveTemporal.Incrementables)
+                                        @foreach (var item in coveTemporal.PreciosPagados)
                                         {
                                             <tr>
-                                                <td>@inc.TipoIncrementable</td>
-                                                <td>@(inc.FechaErogacion?.ToShortDateString() ?? "-")</td>
-                                                <td class="text-end">@inc.Importe.ToString("N2")</td>
-                                                <td>@inc.TipoMoneda</td>
-                                                <td class="text-center">
-                                                    <button type="button" class="btn btn-xs btn-outline-danger" @onclick="() => EliminarIncrementable(inc)">🗑️</button>
-                                                </td>
+                                                <td>@item.FechaPago?.ToShortDateString()</td>
+                                                <td>@item.TipoPago</td>
+                                                <td class="text-center">@item.TipoMoneda</td>
+                                                <td class="text-end">@item.TipoCambio</td>
+                                                <td class="text-end">@item.Total.ToString("N2")</td>
+                                                <td class="text-center"><button type="button" class="btn btn-link text-danger p-0" @onclick="() => coveTemporal.PreciosPagados.Remove(item)"><i class="bi bi-trash"></i></button></td>
                                             </tr>
                                         }
                                     </tbody>
                                 </table>
-                            }
-                            else
-                            {
-                                <p class="text-muted text-center py-4">No has agregado incrementables a este COVE.</p>
-                            }
+                            </div>
                         </div>
 
-                        <div class="modal-footer mt-3">
-                            <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">💾 Guardar COVE en Lista</button>
+                        @* TAB 3: POR PAGAR *@
+                        <div class="@(tabActiva == 3 ? "d-block" : "d-none")">
+                            <div class="p-3 bg-white rounded border mb-3 shadow-sm">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-3"><label class="form-label small fw-bold text-muted">FECHA</label><InputDate class="form-control form-control-sm" @bind-Value="tempPorPagar.FechaPago" /></div>
+                                    <div class="col-md-3"><label class="form-label small fw-bold text-muted">TOTAL</label><InputNumber class="form-control form-control-sm" @bind-Value="tempPorPagar.Total" /></div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small fw-bold text-muted">MONEDA</label>
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempPorPagar.TipoMoneda">
+                                            <option value="">-- Seleccione --</option>
+                                            @foreach (var m in ListaMonedas)
+                                            {
+                                                <option value="@m.Clave">@m.Clave - @m.Descripcion</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-2"><label class="form-label small fw-bold text-muted">T.C.</label><InputNumber class="form-control form-control-sm" @bind-Value="tempPorPagar.TipoCambio" /></div>
+                                    <div class="col-md-2"><button type="button" class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarPorPagar"><i class="bi bi-plus-lg"></i> AGREGAR</button></div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">FORMA PAGO *</label>
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempPorPagar.TipoPago">
+                                            <option value="">-- Seleccione --</option>
+                                            @foreach (var fp in ListaFormasPago)
+                                            {
+                                                <option value="@fp.Clave">@fp.Clave - @fp.Descripcion</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-6"><label class="form-label small fw-bold text-muted">COMENTARIOS</label><InputText class="form-control form-control-sm" @bind-Value="tempPorPagar.SituacionNoFechaPago" /></div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive border rounded bg-white">
+                                <table class="table table-sm table-striped table-hover mb-0 small">
+                                    <thead class="table-light text-uppercase text-muted" style="font-size:0.75rem;">
+                                        <tr>
+                                            <th class="py-2">Fecha</th>
+                                            <th class="py-2">Forma Pago</th>
+                                            <th class="py-2">t.c</th>
+                                            <th class="text-center py-2">Moneda</th>
+                                            <th class="py-2">Total</th>
+                                            <th class="text-end py-2">comentarios</th>
+                                            <th class="text-center py-2">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in coveTemporal.PreciosPorPagar)
+                                        {
+                                            <tr>
+                                                <td>@(item.FechaPago.Value.ToShortDateString())</td>
+                                                <td>@item.TipoPago</td>
+                                                <td>@item.TipoCambio.ToString("N2")</td>
+                                                <td class="text-center">@item.TipoMoneda</td>
+                                                <td>@item.Total.ToString("N2")</td>
+                                                <td class="text-end">@item.SituacionNoFechaPago</td>
+                                                <td class="text-center"><button type="button" class="btn btn-link text-danger p-0" @onclick="() => coveTemporal.PreciosPorPagar.Remove(item)"><i class="bi bi-trash"></i></button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+
+                        @* TAB 4: COMPENSACIONES *@
+                        <div class="@(tabActiva == 4 ? "d-block" : "d-none")">
+                            <div class="p-3 bg-white rounded border mb-3 shadow-sm">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-3"><label class="form-label small fw-bold text-muted">FECHA</label><InputDate class="form-control form-control-sm" @bind-Value="tempCompen.Fecha" /></div>
+                                    <div class="col-md-7"><label class="form-label small fw-bold text-muted">MOTIVO</label><InputText class="form-control form-control-sm" @bind-Value="tempCompen.Motivo" /></div>
+                                    <div class="col-md-2"><button type="button" class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarCompensacion"><i class="bi bi-plus-lg"></i> AGREGAR</button></div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">FORMA PAGO *</label>
+                                        <InputSelect class="form-select form-select-sm" @bind-Value="tempCompen.TipoPago">
+                                            <option value="">-- Seleccione --</option>
+                                            @foreach (var fp in ListaFormasPago)
+                                            {
+                                                <option value="@fp.Clave">@fp.Clave - @fp.Descripcion</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                    <div class="col-md-6"><label class="form-label small fw-bold text-muted">PRESTACIÓN MERCANCÍA</label><InputText class="form-control form-control-sm" @bind-Value="tempCompen.PrestacionMercancia" /></div>
+                                </div>
+                            </div>
+                            <div class="table-responsive border rounded bg-white">
+                                <table class="table table-sm table-striped table-hover mb-0 small">
+                                    <thead class="table-light text-uppercase text-muted" style="font-size:0.75rem;"><tr><th class="py-2">Fecha</th><th class="py-2">Motivo</th><th class="py-2">Prestación</th><th class="py-2">Tipo Pago</th><th class="text-center py-2">Acción</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var item in coveTemporal.Compensaciones)
+                                        {
+                                            <tr>
+                                                <td>@item.Fecha?.ToShortDateString()</td>
+                                                <td>@item.Motivo</td>
+                                                <td>@item.PrestacionMercancia</td>
+                                                <td>@item.TipoPago</td>
+                                                <td class="text-center"><button type="button" class="btn btn-link text-danger p-0" @onclick="() => coveTemporal.Compensaciones.Remove(item)"><i class="bi bi-trash"></i></button></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        @* TAB 5: CONCEPTOS (ESTANDARIZADO) *@
+                        <div class="@(tabActiva == 5 ? "d-block" : "d-none")">
+
+                            @* INCREMENTABLES *@
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-plus-circle-fill"></i>
+                                        <h6 class="mb-0 fw-bold text-uppercase">Incrementables</h6>
+                                    </div>
+                                    <span class="badge bg-white text-primary rounded-pill">@coveTemporal.Incrementables.Count</span>
+                                </div>
+                                <div class="card-body bg-white">
+                                    <div class="row g-2 align-items-end mb-3 border bg-light p-3 rounded">
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-bold text-muted">TIPO</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="tempIncre.TipoIncrementable">
+                                                <option value="">-- Seleccione --</option>
+                                                @foreach (var i in ListaIncrementables)
+                                                {
+                                                    <option value="@i.Clave">@i.Clave - @i.Descripcion</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div class="col-md-2"><label class="form-label small fw-bold text-muted">FECHA</label><InputDate class="form-control form-control-sm" @bind-Value="tempIncre.FechaErogacion" /></div>
+                                        <div class="col-md-2"><label class="form-label small fw-bold text-muted">IMPORTE</label><InputNumber class="form-control form-control-sm" @bind-Value="tempIncre.Importe" /></div>
+                                        <div class="col-md-1">
+                                            <label class="form-label small fw-bold text-muted">MONEDA</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="tempIncre.TipoMoneda">
+                                                <option value="">-- Selecione --</option>
+                                                @foreach (var m in ListaMonedas)
+                                                {
+                                                    <option value="@m.Clave">@m.Clave - @m.Descripcion</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div class="col-md-1"><label class="form-label small fw-bold text-muted">T.C.</label><InputNumber class="form-control form-control-sm" @bind-Value="tempIncre.TipoCambio" /></div>
+                                        <div class="col-md-1 text-center">
+                                            <label class="form-label small fw-bold text-muted d-block" style="font-size:0.7rem">CARGO IMP.</label>
+                                            <InputCheckbox class="form-check-input" @bind-Value="TempIncreACargoImportador" />
+                                        </div>
+                                        <div class="col-md-2"><button type="button" class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarIncrementable"><i class="bi bi-plus-lg"></i> AGREGAR</button></div>
+                                    </div>
+                                    @if (coveTemporal.Incrementables.Any())
+                                    {
+                                        <div class="table-responsive border rounded">
+                                            <table class="table table-sm table-striped table-hover mb-0 small">
+                                                <thead class="table-light text-uppercase text-muted" style="font-size:0.75rem;">
+                                                    <tr><th class="py-2">Tipo</th><th class="py-2">Fecha</th><th class="text-end py-2">Importe</th><th class="text-center py-2">Moneda</th><th class="text-end py-2">T.C.</th><th class="text-center py-2">Cargo Imp.</th><th class="text-center py-2">Acción</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var inc in coveTemporal.Incrementables)
+                                                    {
+                                                        <tr>
+                                                            <td>@inc.TipoIncrementable</td>
+                                                            <td>@inc.FechaErogacion?.ToShortDateString()</td>
+                                                            <td class="text-end">@inc.Importe.ToString("N2")</td>
+                                                            <td class="text-center">@inc.TipoMoneda</td>
+                                                            <td class="text-end">@inc.TipoCambio</td>
+                                                            <td class="text-center">@(inc.ACargoImportador == true ? "SÍ" : "NO")</td>
+                                                            <td class="text-center"><button type="button" class="btn btn-link text-danger p-0" @onclick="() => coveTemporal.Incrementables.Remove(inc)"><i class="bi bi-trash"></i></button></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            @* DECREMENTABLES *@
+                            <div class="card shadow-sm border-0">
+                                <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-dash-circle-fill"></i>
+                                        <h6 class="mb-0 fw-bold text-uppercase">Decrementables</h6>
+                                    </div>
+                                    <span class="badge bg-white text-primary rounded-pill">@coveTemporal.Decrementables.Count</span>
+                                </div>
+                                <div class="card-body bg-white">
+                                    <div class="row g-2 align-items-end mb-3 border bg-light p-3 rounded">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold text-muted">TIPO</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="tempDecre.TipoIncrementable">
+                                                <option value="">-- Seleccione --</option>
+                                                @foreach (var i in ListaDecrementables)
+                                                {
+                                                    <option value="@i.Clave">@i.Clave - @i.Descripcion</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div class="col-md-2"><label class="form-label small fw-bold text-muted">FECHA</label><InputDate class="form-control form-control-sm" @bind-Value="tempDecre.FechaErogacion" /></div>
+                                        <div class="col-md-2"><label class="form-label small fw-bold text-muted">IMPORTE</label><InputNumber class="form-control form-control-sm" @bind-Value="tempDecre.Importe" /></div>
+                                        <div class="col-md-1">
+                                            <label class="form-label small fw-bold text-muted">MONEDA</label>
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="tempDecre.TipoMoneda">
+                                                <option value="">-- Selecione --</option>
+                                                @foreach (var m in ListaMonedas)
+                                                {
+                                                    <option value="@m.Clave">@m.Clave - @m.Descripcion</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <div class="col-md-1"><label class="form-label small fw-bold text-muted">T.C.</label><InputNumber class="form-control form-control-sm" @bind-Value="tempDecre.TipoCambio" /></div>
+                                        <div class="col-md-2"><button type="button" class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarDecrementable"><i class="bi bi-plus-lg"></i> AGREGAR</button></div>
+                                    </div>
+
+                                    @if (coveTemporal.Decrementables.Any())
+                                    {
+                                        <div class="table-responsive border rounded">
+                                            <table class="table table-sm table-striped table-hover mb-0 small">
+                                                <thead class="table-light text-uppercase text-muted" style="font-size:0.75rem;">
+                                                    <tr><th class="py-2">Tipo</th><th class="py-2">Fecha</th><th class="text-end py-2">Importe</th><th class="text-center py-2">Moneda</th><th class="text-end py-2">T.C.</th><th class="text-center py-2">Acción</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var dec in coveTemporal.Decrementables)
+                                                    {
+                                                        <tr>
+                                                            <td>@dec.TipoIncrementable</td>
+                                                            <td>@dec.FechaErogacion?.ToShortDateString()</td>
+                                                            <td class="text-end">@dec.Importe.ToString("N2")</td>
+                                                            <td class="text-center">@dec.TipoMoneda</td>
+                                                            <td class="text-end">@dec.TipoCambio</td>
+                                                            <td class="text-center"><button type="button" class="btn btn-link text-danger p-0" @onclick="() => coveTemporal.Decrementables.Remove(dec)"><i class="bi bi-trash"></i></button></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
                     </EditForm>
                 </div>
-
+                @* FOOTER DEL MODAL *@
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm fw-bold px-4" @onclick="GuardarCoveEnLista"><i class="bi bi-save"></i> GUARDAR COVE</button>
+                </div>
             </div>
         </div>
     </div>
@@ -319,249 +652,286 @@
 
 @code {
     [Parameter] public int? Id { get; set; }
-    // 1. Objeto Principal (La Carpeta)
-    private CrearManifestacionDto manifestacion = new CrearManifestacionDto();
-    // Esta variable guardará la referencia al objeto original que queremos modificar
-    private CoveDetalleDto? coveEnEdicion = null;
-    // 2. Control del Modal
-    private bool mostrarModal = false;
-    private CoveDetalleDto coveTemporal = new CoveDetalleDto();
-    private int tabActiva = 1; // 1 = General, 2 = Incrementables
-    private IncrementableDto tempIncre = new IncrementableDto();
 
-    // === LISTAS DE CATÁLOGOS (Dinámicas desde BD) ===
+    // MODELO PRINCIPAL (Ya sin TipoOperacion)
+    private CrearManifestacionDto manifestacion = new CrearManifestacionDto();
+
+    // Variables de Estado
+    private bool mostrarModal = false;
+    private int tabActiva = 1;
+    private CoveDetalleDto? coveEnEdicion = null;
+    private CoveDetalleDto coveTemporal = new CoveDetalleDto();
+    private int clienteSeleccionadoId = 0;
+    // Temporales para Agregar Items
+    private PrecioPagadoDto tempPagado = new();
+    private PrecioPorPagarDto tempPorPagar = new();
+    private CompensacionDto tempCompen = new();
+    private ConceptoValorDto tempIncre = new();
+    private ConceptoValorDto tempDecre = new();
+    private ConsultaRfcDto tempRfc = new();
+    private List<ClienteDto> ListaMisClientes = new();
+    // Proxy para el Checkbox (Soluciona error bool?)
+    private bool TempIncreACargoImportador
+    {
+        get => tempIncre.ACargoImportador ?? false;
+        set => tempIncre.ACargoImportador = value;
+    }
+
+    // Catálogos
     private List<CatalogoDto> ListaIncoterms = new();
     private List<CatalogoDto> ListaMetodosValoracion = new();
     private List<CatalogoDto> ListaFormasPago = new();
-    private List<CatalogoDto> ListaMonedas = new(); // Esta la dejaremos estática o la puedes cargar de BD también
     private List<CatalogoDto> ListaIncrementables = new();
     private List<CatalogoDto> ListaDecrementables = new();
+    private List<CatalogoDto> ListaTiposFigura = new();
+    private List<CatalogoDto> ListaMonedas = new();
 
-
-    private void AbrirModalNuevo()
+    protected override async Task OnInitializedAsync()
     {
-        coveEnEdicion = null; // IMPORTANTE: Reseteamos para que sepa que es NUEVO
-        coveTemporal = new CoveDetalleDto();
-        // Valores por defecto del XML
-        coveTemporal.Incoterm = "";
-        coveTemporal.MetodoValoracion = "";
-        coveTemporal.TipoPago = "";
-        coveTemporal.MonedaPago = "";
-
-        // Reiniciamos incrementables
-        tempIncre = new IncrementableDto();
-        tempIncre.TipoIncrementable = "";
-        tempIncre.TipoMoneda = "";
-        tabActiva = 1; // Siempre abrir en la primera pestaña
-
-        mostrarModal = true;
-    }
-
-    private void CerrarModal() => mostrarModal = false;
-
-    private void GuardarCoveEnLista()
-    {
-        if (coveEnEdicion != null) // MODO EDICIÓN
+        await CargarCatalogos();
+        try
         {
-            // Buscamos el índice del objeto original en la lista
-            var index = manifestacion.Coves.IndexOf(coveEnEdicion);
+            ListaMisClientes = await Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes/mis-clientes");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error cargando clientes: " + ex.Message);
+        }
+        ResetTemporales();
+    }
+    private void OnClienteSeleccionado(int id)
+    {
+        clienteSeleccionadoId = id;
 
-            if (index != -1)
+        if (id > 0)
+        {
+            // Buscamos el objeto completo en la lista memoria
+            var cliente = ListaMisClientes.FirstOrDefault(c => c.ClienteId == id);
+            if (cliente != null)
             {
-                // Reemplazamos el viejo con la versión nueva editada
-                manifestacion.Coves[index] = coveTemporal;
+                // Asignamos al modelo de la manifestación
+                manifestacion.ClienteId = cliente.ClienteId;
+                manifestacion.Cliente = cliente; // Para que se vea el RFC en el input readonly
+
+                // Opcional: Llenar otros datos automáticos (Dirección, etc.)
             }
         }
-        else // MODO CREACIÓN (Nuevo)
+    }
+    private async Task CargarCatalogos()
+    {
+        var t1 = CargarCat("api/catalogos/incoterms", l => ListaIncoterms = l);
+        var t2 = CargarCat("api/catalogos/metodos-valoracion", l => ListaMetodosValoracion = l);
+        var t3 = CargarCat("api/catalogos/formas-pago", l => ListaFormasPago = l);
+        var t4 = CargarCat("api/catalogos/incrementables", l => ListaIncrementables = l);
+        var t5 = CargarCat("api/catalogos/decrementables", l => ListaDecrementables = l);
+        var t6 = CargarCat("api/catalogos/tipos-figura", l => ListaTiposFigura = l);
+        var t7 = CargarCat("api/catalogos/monedas", l => ListaMonedas = l);
+        await Task.WhenAll(t1, t2, t3, t4, t5, t6,t7);
+    }
+
+    private async Task CargarCat(string url, Action<List<CatalogoDto>> setter) { try { var r = await Http.GetFromJsonAsync<List<CatalogoDto>>(url); if (r != null) setter(r); } catch { } }
+
+    private async Task CargarExpediente(int id)
+    {
+        try
         {
-            manifestacion.Coves.Add(coveTemporal);
+            var res = await Http.GetFromJsonAsync<ManifestacionDto>($"api/ManifestacionesValor/{id}");
+            if (res != null)
+            {
+                manifestacion.ReferenciaAdmin = res.NumeroPedimento;
+                manifestacion.RfcImportador = res.RfcImportador; // Viene del DTO de lectura (Mapeado desde Cliente)
+
+                // Mapeo Totales
+                manifestacion.TotalPrecioPagado = res.TotalPrecioPagado ?? 0;
+                manifestacion.TotalPrecioPorPagar = res.TotalPrecioPorPagar ?? 0;
+                manifestacion.TotalIncrementables = res.TotalIncrementables ?? 0;
+                manifestacion.TotalDecrementables = res.TotalDecrementables ?? 0;
+                manifestacion.TotalValorAduana = res.TotalValorAduana ?? 0;
+
+                // Mapeo Consultas RFC
+                manifestacion.Consultas = res.Consultas.Select(c => new ConsultaRfcDto { RfcConsulta = c.RfcConsulta, TipoFigura = c.TipoFigura }).ToList();
+
+                // Mapeo COVEs
+                manifestacion.Coves = res.ManifestacionCoves.Select(c => new CoveDetalleDto
+                {
+                    NumeroCove = c.NumeroCove,
+                    Incoterm = c.Incoterm,
+                    Aduana = c.Aduana ?? 0,
+                    Patente = c.Patente ?? 0,
+                    NumeroPedimento = c.NumeroPedimento,
+                    ExisteVinculacion = c.ExisteVinculacion ?? false,
+                    MetodoValoracion = c.MetodoValoracion,
+
+                    PreciosPagados = c.PreciosPagados,
+                    PreciosPorPagar = c.PreciosPorPagar,
+                    Compensaciones = c.Compensaciones,
+
+                    Incrementables = c.ConceptosValor?.Where(x => x.TipoConcepto == "INCREMENTABLE").Select(x => new ConceptoValorDto
+                    {
+                        TipoIncrementable = x.ClaveConcepto,
+                        Importe = x.Importe,
+                        TipoMoneda = x.TipoMoneda,
+                        FechaErogacion = x.FechaErogacion,
+                        TipoCambio = x.TipoCambio,
+                        ACargoImportador = x.ACargoImportador
+                    }).ToList() ?? new(),
+
+                    Decrementables = c.ConceptosValor?.Where(x => x.TipoConcepto == "DECREMENTABLE").Select(x => new ConceptoValorDto
+                    {
+                        TipoIncrementable = x.ClaveConcepto,
+                        Importe = x.Importe,
+                        TipoMoneda = x.TipoMoneda,
+                        FechaErogacion = x.FechaErogacion,
+                        TipoCambio = x.TipoCambio
+                    }).ToList() ?? new()
+                }).ToList();
+            }
+        }
+        catch (Exception ex) { await Swal.FireAsync("Error", "No se pudo cargar: " + ex.Message, SweetAlertIcon.Error); }
+    }
+
+    // === GESTIÓN DE LISTAS Y MODAL ===
+    private void AgregarRfcConsulta() { if (!string.IsNullOrEmpty(tempRfc.RfcConsulta) && !string.IsNullOrEmpty(tempRfc.TipoFigura)) { manifestacion.Consultas.Add(new ConsultaRfcDto { RfcConsulta = tempRfc.RfcConsulta, TipoFigura = tempRfc.TipoFigura }); tempRfc = new(); } }
+
+    private void AbrirModalNuevo() { coveEnEdicion = null; coveTemporal = new(); ResetTemporales(); tabActiva = 1; mostrarModal = true; }
+    private void CargarDatosParaEditar(CoveDetalleDto item) { coveEnEdicion = item; var json = JsonSerializer.Serialize(item); coveTemporal = JsonSerializer.Deserialize<CoveDetalleDto>(json)!; ResetTemporales(); tabActiva = 1; mostrarModal = true; }
+    private void CerrarModal() => mostrarModal = false;
+    private void GuardarCoveEnLista() { if (coveEnEdicion != null) { var i = manifestacion.Coves.IndexOf(coveEnEdicion); if (i != -1) manifestacion.Coves[i] = coveTemporal; } else { manifestacion.Coves.Add(coveTemporal); } CerrarModal(); }
+    private void EliminarCove(CoveDetalleDto item) => manifestacion.Coves.Remove(item);
+
+    private void AgregarPagado() 
+    { 
+        if (tempPagado.Total == 0 || !tempPagado.FechaPago.HasValue || tempPagado.TipoMoneda == "" || tempPagado.TipoCambio==0 || tempPagado.TipoPago=="")
+        {
+
+            MostrarToast("Debes completar todos los campos", SweetAlertIcon.Warning);
+            return;
+
+        }
+        else
+        {
+            coveTemporal.PreciosPagados.Add(tempPagado);
+            tempPagado = new()
+                {
+                    TipoMoneda = "",
+                    TipoCambio = 0,
+                    FechaPago = null,
+                    TipoPago = ""
+                };
+            MostrarToast("Nuevo precio pagado agregado", SweetAlertIcon.Success);
+        } 
+    }
+
+
+    private void AgregarPorPagar()
+    {
+        if (!tempPorPagar.FechaPago.HasValue )
+        {
+            MostrarToast("La fecha es un campo obligatorio", SweetAlertIcon.Warning);
+            return;
+        }
+        if (tempPorPagar.Total <= 0)
+        {
+            MostrarToast("El total es un campo obligatorio y no puede ser menor a 0", SweetAlertIcon.Warning);
+            return;
         }
 
-        CerrarModal();
-    }
 
-    private void EliminarCove(CoveDetalleDto item)
-    {
-        manifestacion.Coves.Remove(item);
-    }
-
-    // Función para agregar un gasto a la tablita interna del modal
-    private void AgregarIncrementable()
-    {
-        if (tempIncre.Importe > 0 && !string.IsNullOrEmpty(tempIncre.TipoIncrementable))
+        if (tempPorPagar.TipoMoneda == "")
         {
-            // Agregamos a la lista del COVE actual
-            coveTemporal.Incrementables.Add(tempIncre);
-
-            // Reiniciamos el objeto para permitir agregar otro
-            tempIncre = new IncrementableDto();
+            tempPorPagar.TipoMoneda = "";
         }
+        if (tempPorPagar.TipoCambio == 0)
+        {
+            tempPorPagar.TipoCambio = 0;
+        }
+        if (tempPorPagar.TipoPago == "")
+        {
+            tempPorPagar.TipoPago = "";
+        }
+        if (tempPorPagar.SituacionNoFechaPago == "")
+        {
+            tempPorPagar.SituacionNoFechaPago = "";
+        }
+        
+       
+            coveTemporal.PreciosPorPagar.Add(tempPorPagar);
+            tempPorPagar = new() 
+            { 
+                FechaPago =null,
+                Total=0,
+                TipoMoneda = "",
+                TipoCambio = 0,
+                TipoPago = "",
+                SituacionNoFechaPago = ""
+            };
+            MostrarToast("Nuevo precio por pagar agregado", SweetAlertIcon.Success);
+        
     }
 
-    private void EliminarIncrementable(IncrementableDto item)
+    private void AgregarCompensacion()
     {
-        coveTemporal.Incrementables.Remove(item);
+        if (string.IsNullOrEmpty(tempCompen.TipoPago)) return;
+        if (string.IsNullOrEmpty(tempCompen.Motivo)) return;
+        if (string.IsNullOrEmpty(tempCompen.PrestacionMercancia)) tempCompen.PrestacionMercancia = "-";
+        coveTemporal.Compensaciones.Add(tempCompen);
+        tempCompen = new() { Fecha = DateTime.Now, TipoPago = "", PrestacionMercancia = "" };
+    }
+     
+    private void AgregarIncrementable() { if (tempIncre.Importe > 0 && !string.IsNullOrEmpty(tempIncre.TipoIncrementable)) { coveTemporal.Incrementables.Add(tempIncre); tempIncre = new() { TipoMoneda = "MXN", TipoCambio = 1, FechaErogacion = DateTime.Now, ACargoImportador = false }; } }
+    private void AgregarDecrementable() { if (tempDecre.Importe > 0 && !string.IsNullOrEmpty(tempDecre.TipoIncrementable)) { coveTemporal.Decrementables.Add(tempDecre); tempDecre = new() { TipoMoneda = "MXN", TipoCambio = 1, FechaErogacion = DateTime.Now }; } }
+
+    private void ResetTemporales()
+    {
+        tempPagado = new() { TipoMoneda = "", TipoCambio = 0, FechaPago = null, TipoPago = "" };
+        tempPorPagar = new() { TipoMoneda = "", TipoCambio = 0, TipoPago = "", SituacionNoFechaPago = "" };
+        tempCompen = new() { Fecha = null, TipoPago = "", PrestacionMercancia = "" };
+        tempIncre = new() { TipoMoneda = "", TipoCambio = 0, FechaErogacion =null, ACargoImportador = false };
+        tempDecre = new() { TipoMoneda = "", TipoCambio = 0, FechaErogacion = null };
+        tempRfc = new();
     }
 
     private async Task GuardarTodo()
     {
-        // 1. Validaciones
         if (string.IsNullOrEmpty(manifestacion.ReferenciaAdmin))
         {
-            await Swal.FireAsync(new SweetAlertOptions
-            {
-                Title = "Falta información",
-                Text = "El campo 'Referencia / Pedimento' es obligatorio.",
-                Icon = SweetAlertIcon.Warning,
-                ConfirmButtonText = "Entendido"
-            });
-            return;
-            
-        }
-        if (manifestacion.Coves.Count == 0)
-        {
-
-            await Swal.FireAsync(new SweetAlertOptions
-            {
-                Title = "¡Atención!",
-                Text = "Debe agregar al menos un COVE (Factura) antes de guardar.",
-                Icon = SweetAlertIcon.Error,
-                ConfirmButtonText = "Corregir"
-            });
-            return;
+            await Swal.FireAsync("Atención", "Falta el Número de Pedimento.", SweetAlertIcon.Warning); return;
         }
 
         try
         {
-            HttpResponseMessage respuesta;
+            HttpResponseMessage resp;
+            if (Id.HasValue) resp = await Http.PutAsJsonAsync($"api/ManifestacionesValor/{Id}", manifestacion);
+            else resp = await Http.PostAsJsonAsync("api/ManifestacionesValor", manifestacion);
 
-            // 2. DECISIÓN: ¿CREAR O EDITAR?
-            if (Id.HasValue)
+            if (resp.IsSuccessStatusCode)
             {
-                // === MODO EDICIÓN (PUT) ===
-                respuesta = await Http.PutAsJsonAsync($"api/ManifestacionesValor/{Id}", manifestacion);
-            }
-            else
-            {
-                // === MODO CREACIÓN (POST) ===
-                respuesta = await Http.PostAsJsonAsync("api/ManifestacionesValor", manifestacion);
-            }
-
-            // 3. Procesar Respuesta
-            if (respuesta.IsSuccessStatusCode)
-            {
-                await Swal.FireAsync("¡Guardado!", "El expediente se registró correctamente.", SweetAlertIcon.Success);
+                await Swal.FireAsync("Éxito", "Guardado correctamente", SweetAlertIcon.Success);
                 NavManager.NavigateTo("/manifestaciones");
             }
             else
             {
-                var error = await respuesta.Content.ReadAsStringAsync();
-                await Swal.FireAsync("Error", $"No se pudo guardar: {error}", SweetAlertIcon.Error);
+                var err = await resp.Content.ReadAsStringAsync();
+                await Swal.FireAsync("Error", err, SweetAlertIcon.Error);
             }
         }
-        catch (Exception ex)
-        {
-            await Swal.FireAsync("Error de Conexión", ex.Message, SweetAlertIcon.Error);
-        }
+        catch (Exception ex) { await Swal.FireAsync("Error", ex.Message, SweetAlertIcon.Error); }
     }
 
-    private void CargarDatosParaEditar(CoveDetalleDto item)
+    private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
     {
-        // 1. Guardamos la referencia del original (para saber a cuál reemplazar luego)
-        coveEnEdicion = item;
-
-        // 2. CLONAMOS el objeto usando JSON.
-        // ¿Por qué? Para que si modificas el modal pero das "Cancelar",
-        // el original en la tabla no se vea afectado.
-        var json = JsonSerializer.Serialize(item);
-        coveTemporal = JsonSerializer.Deserialize<CoveDetalleDto>(json)!;
-
-        // 3. Reseteamos variables visuales
-        tempIncre = new IncrementableDto();
-        tabActiva = 1;
-
-        // 4. Abrimos modal
-        mostrarModal = true;
-    }
-
-    // En NuevaManifestacion.razor
-
-    protected override async Task OnInitializedAsync()
-    {
-        // 1. Cargar Catálogos en paralelo para que sea rápido
-        var t1 = CargarCatalogo("api/catalogos/incoterms", l => ListaIncoterms = l);
-        var t2 = CargarCatalogo("api/catalogos/metodos-valoracion", l => ListaMetodosValoracion = l);
-        var t3 = CargarCatalogo("api/catalogos/formas-pago", l => ListaFormasPago = l);
-        var t4 = CargarCatalogo("api/catalogos/incrementables", l => ListaIncrementables = l);
-        var t5 = CargarCatalogo("api/catalogos/decrementables", l => ListaDecrementables = l);
-
-        // Monedas comunes (si no creaste tabla, usamos esta lista manual)
-        ListaMonedas = new List<CatalogoDto> {
-            new(){ Clave="MXN", Descripcion="MXN - Peso Mexicano"},
-            new(){ Clave="USD", Descripcion="USD - Dólar Americano"},
-            new(){ Clave="EUR", Descripcion="EUR - Euro"}
-        };
-
-        await Task.WhenAll(t1, t2, t3, t4, t5);
-
-        if (Id.HasValue) // Si venimos de "Editar"
+        await Swal.FireAsync(new SweetAlertOptions
         {
-            var resultado = await Http.GetFromJsonAsync<ManifestacionDto>($"api/ManifestacionesValor/{Id}");
-
-            if (resultado != null)
-            {
-                // Mapeo de Cabecera
-                manifestacion.ReferenciaAdmin = resultado.NumeroPedimento;
-                manifestacion.TipoOperacion = resultado.TipoOperacion;
-
-                // Mapeo de Hijos (COVEs) y Nietos (Incrementables)
-                if (resultado.ManifestacionCoves != null)
-                {
-                    manifestacion.Coves = resultado.ManifestacionCoves.Select(c => new CoveDetalleDto
-                    {
-                        NumeroCove = c.NumeroCove,
-                        NumeroPedimento = c.NumeroPedimento,
-                        Incoterm = c.Incoterm,
-                        ExisteVinculacion = c.ExisteVinculacion ?? false,
-                        // ... otros campos ...
-                        TotalValorAduana = c.TotalValorAduana ?? 0,
-
-                        // IMPORTANTE: Recuperar la lista de nietos
-                        Incrementables = c.ManifestacionConceptosValor?
-                            .Where(x => x.TipoConcepto == "INCREMENTABLE")
-                            .Select(i => new IncrementableDto
-                            {
-                                TipoIncrementable = i.ClaveConcepto,
-                                FechaErogacion = i.FechaErogacion ?? DateTime.Now, // Ojo con el nullable
-                                Importe = i.Importe,
-                                TipoMoneda = i.TipoMoneda,
-                                ACargoImportador = i.ACargoImportador ?? false
-                            }).ToList() ?? new List<IncrementableDto>()
-
-                    }).ToList();
-                }
-            }
-        }
+            Toast = true,                 // Activa el modo Toast (pequeño)
+            Position = SweetAlertPosition.TopEnd, // Ubicación superior derecha
+            ShowConfirmButton = false,    // Sin botón de "OK"
+            Timer = 4000,                 // Desaparece a los 3 segundos
+            Icon = icono,
+            Title = mensaje,
+            // Opcional: Personalizar ancho si lo sientes muy ancho
+            // Width = "300px"
+        });
     }
 
-
-    // Helper para cargar catálogos y evitar errores si la API falla
-    private async Task CargarCatalogo(string url, Action<List<CatalogoDto>> setter)
-    {
-        try
-        {
-            var resultado = await Http.GetFromJsonAsync<List<CatalogoDto>>(url);
-            if (resultado != null) setter(resultado);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error cargando catálogo {url}: {ex.Message}");
-        }
-    }
-
-    public class CatalogoDto
-    {
-        public string Clave { get; set; } = "";
-        public string Descripcion { get; set; } = "";
-    }
+    public class CatalogoDto { public string Clave { get; set; } = ""; public string Descripcion { get; set; } = ""; }
 }

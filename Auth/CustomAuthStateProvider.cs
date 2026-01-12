@@ -88,10 +88,12 @@ namespace SistemaAduanero.Web.Auth
         {
             // 1. Borrar Token del navegador
             await _localStorage.RemoveItemAsync("authToken");
-
+            _http.DefaultRequestHeaders.Authorization = null;
             // 2. Avisar a Blazor que el estado cambió a "Anónimo" (Vacío)
-            var anonymousState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-            NotifyAuthenticationStateChanged(Task.FromResult(anonymousState));
+            var identity = new ClaimsIdentity();
+            var user = new ClaimsPrincipal(identity);
+            var state = new AuthenticationState(user);
+            NotifyAuthenticationStateChanged(Task.FromResult(state));
         }
     }
 }

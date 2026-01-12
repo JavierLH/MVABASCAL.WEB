@@ -1,0 +1,333 @@
+﻿@page "/usuarios"
+@inject HttpClient Http
+@inject SweetAlertService Swal
+@using SistemaAduanero.Shared.DTOs
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        @* HEADER AZUL ESTANDAR *@
+        <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-gear"></i>
+                <h6 class="mb-0 fw-bold text-uppercase">Gestión de Usuarios</h6>
+            </div>
+            <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="AbrirModalNuevo">
+                <i class="bi bi-plus-lg"></i> NUEVO USUARIO
+            </button>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 small align-middle">
+                    <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
+                        <tr>
+                            <th class="ps-3 py-2">Usuario</th>
+                            <th>Nombre Completo</th>
+                            <th>Rol</th>
+                            <th>Clientes Asignados</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (ListaUsuarios == null)
+                        {
+                            <tr><td colspan="5" class="text-center py-3">Cargando...</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var u in ListaUsuarios)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-primary">@u.Username</td>
+                                    <td>@u.NombreCompleto</td>
+                                    <td>
+                                        <span class="badge bg-secondary">@u.Rol?.NombreRol</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @* Lógica para mostrar resumen de clientes *@
+                                            @if (u.UsuarioClientes != null && u.UsuarioClientes.Any())
+                                            {
+                                                var nombres = u.UsuarioClientes.Select(uc => uc.Cliente?.RazonSocial).Where(n => n != null).ToArray();
+                                                @if (nombres.Length > 2)
+                                                {
+                                                    <span title="@string.Join("\n", nombres)">
+                                                        @string.Join(", ", nombres.Take(2))... (+@(nombres.Length - 2))
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    @string.Join(", ", nombres)
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-danger fst-italic">Sin asignar</span>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(u)">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => Eliminar(u)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* === MODAL === *@
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-6 text-uppercase fw-bold">
+                        <i class="bi bi-person-fill"></i> @(usuario.UsuarioId > 0 ? "Editar Usuario" : "Nuevo Usuario")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body bg-light">
+
+                    @* SECCIÓN 1: DATOS DE ACCESO *@
+                    <div class="card border-0 shadow-sm p-3 mb-3">
+                        <h6 class="text-primary fw-bold text-uppercase border-bottom pb-2 mb-3 small">Credenciales</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">NOMBRE COMPLETO *</label>
+                                <input class="form-control form-control-sm" @bind="usuario.NombreCompleto" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">ROL *</label>
+                                <InputSelect class="form-select form-select-sm" @bind-Value="usuario.RolId">
+                                    <option value="0">-- Seleccione --</option>
+                                    @foreach (var r in ListaRoles)
+                                    {
+                                        <option value="@r.RolId">@r.NombreRol</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">USUARIO (LOGIN) *</label>
+                                <input class="form-control form-control-sm" @bind="usuario.Username" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">CONTRASEÑA</label>
+                                <input type="password" class="form-control form-control-sm" @bind="usuario.PasswordSinEncriptar"
+                                       placeholder="@(usuario.UsuarioId > 0 ? "Dejar vacío para mantener actual" : "Requerida")" />
+                            </div>
+                        </div>
+                    </div>
+
+                    @* SECCIÓN 2: ASIGNACIÓN DE CLIENTES (CHECKLIST) *@
+                    <div class="card border-0 shadow-sm p-3">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h6 class="text-primary fw-bold text-uppercase small mb-0">Asignar Clientes Permitidos</h6>
+                            <button class="btn btn-outline-secondary btn-sm py-0" style="font-size: 0.7rem;" @onclick="SeleccionarTodos">
+                                <i class="bi bi-check-all"></i> Todos/Ninguno
+                            </button>
+                        </div>
+
+                        @* Contenedor con Scroll para muchos clientes *@
+                        <div class="d-flex flex-wrap gap-2 bg-white border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            @if (ListaTodosClientes != null)
+                            {
+                                @foreach (var cte in ListaTodosClientes)
+                                {
+                                    bool isChecked = ClientesSeleccionadosIds.Contains(cte.ClienteId);
+
+                                    <div class="form-check form-check-inline px-3 py-1 m-1 border rounded @(isChecked ? "border-primary bg-primary bg-opacity-10" : "bg-light")" style="cursor: pointer;">
+                                        <input class="form-check-input" type="checkbox"
+                                               checked="@isChecked"
+                                               @onchange="@(e => ToggleCliente(cte.ClienteId, e.Value))"
+                                               id="cte_@cte.ClienteId">
+                                        <label class="form-check-label small user-select-none" for="cte_@cte.ClienteId" style="cursor: pointer;">
+                                            @cte.RazonSocial
+                                        </label>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        <div class="form-text mt-1 text-end">
+                            <small>Seleccionados: @ClientesSeleccionadosIds.Count</small>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4" @onclick="Guardar">
+                        <i class="bi bi-save"></i> GUARDAR USUARIO
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // 1. Listas Maestras
+    private List<Usuario>? ListaUsuarios;
+    private List<Role> ListaRoles = new();
+    private List<ClienteDto> ListaTodosClientes = new();
+
+    // 2. Variables de Edición
+    private Usuario usuario = new();
+    private HashSet<int> ClientesSeleccionadosIds = new(); // Usamos HashSet para búsquedas rápidas
+    private bool mostrarModal = false;
+
+    // 3. Carga Inicial
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatosCompletos();
+    }
+
+    private async Task CargarDatosCompletos()
+    {
+        try
+        {
+            // Ejecutamos las 3 llamadas en paralelo para ser más rápidos
+            var t1 = Http.GetFromJsonAsync<List<Usuario>>("api/usuarios");
+            var t2 = Http.GetFromJsonAsync<List<Role>>("api/roles"); // Verifica que tengas este controller
+            var t3 = Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes"); // Debe ser el GetClientes general
+
+            await Task.WhenAll(t1, t2, t3);
+
+            ListaUsuarios = t1.Result ?? new();
+            ListaRoles = t2.Result ?? new();
+            ListaTodosClientes = t3.Result ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            await Swal.FireAsync("Error", "No se pudieron cargar los catálogos.", SweetAlertIcon.Error);
+        }
+    }
+
+    // 4. Modal y Edición
+    private void AbrirModalNuevo()
+    {
+        usuario = new() { Activo = true, RolId = 0, UsuarioClientes = new List<UsuarioCliente>() };
+        ClientesSeleccionadosIds.Clear();
+        mostrarModal = true;
+    }
+
+    private void Editar(Usuario item)
+    {
+        // Clonamos el objeto para edición segura
+        usuario = new Usuario
+        {
+            UsuarioId = item.UsuarioId,
+            NombreCompleto = item.NombreCompleto,
+            Username = item.Username,
+            RolId = item.RolId,
+            Activo = item.Activo,
+            PasswordHash = item.PasswordHash, // Conservamos el hash viejo
+            UsuarioClientes = new List<UsuarioCliente>() // Reiniciamos la lista local
+        };
+
+        // Llenamos el HashSet visual con los IDs que el usuario YA tiene
+        ClientesSeleccionadosIds = item.UsuarioClientes.Select(uc => uc.ClienteId).ToHashSet();
+
+        mostrarModal = true;
+    }
+
+    // 5. Lógica del Checklist
+    private void ToggleCliente(int clienteId, object? checkedValue)
+    {
+        bool isChecked = (bool)(checkedValue ?? false);
+        if (isChecked) ClientesSeleccionadosIds.Add(clienteId);
+        else ClientesSeleccionadosIds.Remove(clienteId);
+    }
+
+    private void SeleccionarTodos()
+    {
+        if (ClientesSeleccionadosIds.Count == ListaTodosClientes.Count)
+            ClientesSeleccionadosIds.Clear(); // Si ya están todos, limpiar
+        else
+            ClientesSeleccionadosIds = ListaTodosClientes.Select(c => c.ClienteId).ToHashSet(); // Sino, seleccionar todos
+    }
+
+    // 6. Guardar
+    private async Task Guardar()
+    {
+        // Validaciones básicas
+        if (string.IsNullOrEmpty(usuario.NombreCompleto) || string.IsNullOrEmpty(usuario.Username) || usuario.RolId == 0)
+        {
+            await Swal.FireAsync("Faltan datos", "Verifica nombre, usuario y rol.", SweetAlertIcon.Warning);
+            return;
+        }
+        if (usuario.UsuarioId == 0 && string.IsNullOrEmpty(usuario.PasswordSinEncriptar))
+        {
+            await Swal.FireAsync("Contraseña Requerida", "Para usuarios nuevos debes asignar una contraseña.", SweetAlertIcon.Warning);
+            return;
+        }
+        if (ClientesSeleccionadosIds.Count == 0)
+        {
+            // Opcional: Advertencia si no asignó ningún cliente
+            // await Swal.FireAsync("Ojo", "No asignaste ningún cliente.", SweetAlertIcon.Info);
+        }
+
+        // PREPARAR EL OBJETO PARA ENVIAR AL BACKEND
+        // Convertimos los IDs seleccionados (HashSet) en la lista de objetos que espera la API
+        usuario.UsuarioClientes = ClientesSeleccionadosIds.Select(id => new UsuarioCliente
+        {
+            ClienteId = id
+            // El UsuarioId lo asigna el backend
+        }).ToList();
+
+        try
+        {
+            HttpResponseMessage resp;
+            if (usuario.UsuarioId > 0)
+                resp = await Http.PutAsJsonAsync($"api/usuarios/{usuario.UsuarioId}", usuario);
+            else
+                resp = await Http.PostAsJsonAsync("api/usuarios", usuario);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                await Swal.FireAsync("Guardado", "Usuario registrado correctamente.", SweetAlertIcon.Success);
+                await CargarDatosCompletos(); // Recargar tabla
+                CerrarModal();
+            }
+            else
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                await Swal.FireAsync("Error al guardar", msg, SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Swal.FireAsync("Error Crítico", ex.Message, SweetAlertIcon.Error);
+        }
+    }
+
+    private void CerrarModal() => mostrarModal = false;
+
+    private async Task Eliminar(Usuario u)
+    {
+        var conf = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Desactivar Usuario?",
+            Text = $"Se quitará el acceso a: {u.Username}",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, desactivar"
+        });
+
+        if (conf.IsConfirmed)
+        {
+            var resp = await Http.DeleteAsync($"api/usuarios/{u.UsuarioId}");
+            if (resp.IsSuccessStatusCode) await CargarDatosCompletos();
+        }
+    }
+}

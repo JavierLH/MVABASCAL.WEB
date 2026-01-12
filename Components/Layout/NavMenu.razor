@@ -1,84 +1,83 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">ABASCAL</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
+﻿@* NavMenu.razor *@
+<div class="top-row ps-3 navbar navbar-dark d-flex align-items-center justify-content-between">
+    <div class="container-fluid p-0 d-flex align-items-center">
+        <a class="navbar-brand me-auto" href="">ABASCAL</a>
+
+        <button class="btn btn-link text-white p-0 me-3" @onclick="ToggleSidebar">
+            <span class="bi bi-list fs-3 toggler-icon"></span>
         </button>
     </div>
 </div>
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
-
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Inicio
+                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span>
+                        <span class="nav-text">Inicio</span>
                     </NavLink>
                 </div>
 
                 <div class="nav-item px-3">
-                    <div class="nav-link d-flex justify-content-between align-items-center"
-                         @onclick="ToggleManifestaciones"
-                         style="cursor: pointer;">
+                    <NavLink class="nav-link" href="clientes">
+                        <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span>
+                        <span class="nav-text">Clientes</span>
+                    </NavLink>
+                </div>
 
-                        <span>
-                            <span class="bi bi-folder2-open-nav-menu" aria-hidden="true"></span> Manifestaciones
-                        </span>
-
-                        <span class="bi @(expandManifestaciones ? "bi-chevron-down" : "bi-chevron-right") small"></span>
+                <div class="nav-item px-3">
+                    <div class="nav-link d-flex align-items-center" @onclick="ToggleManifestaciones">
+                        <span class="bi bi-folder2-open-nav-menu" aria-hidden="true"></span>
+                        <span class="nav-text flex-grow-1">Manifestaciones</span>
+                        <span class="bi @(expandManifestaciones ? "bi-chevron-down" : "bi-chevron-right") small ms-auto"></span>
                     </div>
                 </div>
 
                 @if (expandManifestaciones)
                 {
-                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeIn">
+                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
                         <NavLink class="nav-link" href="manifestaciones">
-                            <span class="bi bi-list-ul-nav-menu" aria-hidden="true"></span> Ver Listado
+                            <span class="bi bi-list-ul-nav-menu" aria-hidden="true"></span>
+                            <span class="nav-text">Ver Listado</span>
                         </NavLink>
                     </div>
-
-                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeIn">
+                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
                         <NavLink class="nav-link" href="manifestaciones/nueva">
-                            <span class="bi bi-plus-square-nav-menu" aria-hidden="true"></span> Crear Nueva
+                            <span class="bi bi-plus-square-nav-menu" aria-hidden="true"></span>
+                            <span class="nav-text">Crear Nueva</span>
                         </NavLink>
                     </div>
                 }
-
             </Authorized>
-
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Iniciar Sesión
-                    </NavLink>
-                </div>
-            </NotAuthorized>
         </AuthorizeView>
-
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    // --- NUEVA VARIABLE PARA CONTROLAR EL SUBMENÚ ---
     private bool expandManifestaciones = false;
+
+    [Parameter] public bool MenuColapsado { get; set; } // Recibir estado del padre
+    [Parameter] public EventCallback ToggleSidebar { get; set; }
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
-        // Solo colapsamos el menú principal en móviles, no afectamos el submenú
         collapseNavMenu = !collapseNavMenu;
     }
 
-    // --- NUEVO MÉTODO PARA ABRIR/CERRAR LA CARPETA ---
-    private void ToggleManifestaciones()
+    private async Task ToggleManifestaciones()
     {
-        expandManifestaciones = !expandManifestaciones;
+        // MEJORA: Si el menú está cerrado y queremos abrir el submenú,
+        // forzamos la apertura del sidebar para que el usuario vea qué está abriendo.
+        if (MenuColapsado)
+        {
+            await ToggleSidebar.InvokeAsync();
+        }
 
-        // Evitamos que al dar clic en la carpeta se cierre el menú lateral completo (en móviles)
-        // Si quisieras que el menú se cierre al seleccionar una opción, se maneja diferente.
+        expandManifestaciones = !expandManifestaciones;
     }
 }

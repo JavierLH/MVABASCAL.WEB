@@ -1,0 +1,362 @@
+﻿@page "/clientes"
+@inject HttpClient Http
+@inject SweetAlertService Swal
+@using SistemaAduanero.Shared.DTOs
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        @* HEADER AZUL ESTANDAR *@
+        <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-people-fill"></i>
+                <h6 class="mb-0 fw-bold text-uppercase">Catálogo de Clientes</h6>
+            </div>
+            <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="AbrirModalNuevo">
+                <i class="bi bi-plus-lg"></i> NUEVO CLIENTE
+            </button>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 small align-middle">
+                    <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
+                        <tr>
+                            <th class="ps-3 py-2">RFC</th>
+                            <th class="py-2">Razón Social</th>
+                            <th class="py-2">Contacto</th>
+                           
+                            <th class="text-center py-2">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (ListaClientes == null)
+                        {
+                            <tr><td colspan="5" class="text-center py-3">Cargando...</td></tr>
+                        }
+                        else if (!ListaClientes.Any())
+                        {
+                            <tr><td colspan="5" class="text-center py-3 text-muted">No hay clientes registrados.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var cliente in ListaClientes)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-primary">@cliente.RFC</td>
+                                    <td>@cliente.RazonSocial</td>
+                                    <td>@cliente.NombreContacto</td>
+                                   
+                                    <td class="text-center">
+                                        <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(cliente)">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => Eliminar(cliente)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* === MODAL (ESTANDARIZADO Y ACTUALIZADO) === *@
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            @* Hice el modal más ancho (modal-xl) *@
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-6 text-uppercase fw-bold">
+                        <i class="bi bi-person-vcard"></i> @(cliente.ClienteId > 0 ? "Editar Cliente" : "Nuevo Cliente")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                </div>
+
+                <div class="modal-body bg-light">
+
+                    @* 1. DATOS GENERALES (MASTER) *@
+                    <div class="card border-0 shadow-sm p-3 mb-3">
+                        <h6 class="text-primary fw-bold text-uppercase border-bottom pb-2 mb-3 small">Datos Generales</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-muted">RFC *</label>
+                                <input class="form-control form-control-sm text-uppercase fw-bold text-primary" @bind="cliente.RFC" placeholder="XAXX010101000" maxlength="13" />
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-muted">RAZÓN SOCIAL *</label>
+                                <input class="form-control form-control-sm" @bind="cliente.RazonSocial" placeholder="Nombre de la empresa" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">NOMBRE CONTACTO</label>
+                                <input class="form-control form-control-sm" @bind="cliente.NombreContacto" />
+                            </div>
+                        </div>
+                    </div>
+
+                    @* 2. DETALLES (EMAILS Y TELÉFONOS) *@
+                    <div class="row g-3">
+
+                        @* COLUMNA IZQUIERDA: EMAILS *@
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-white py-2 border-bottom">
+                                    <h6 class="mb-0 fw-bold text-secondary small text-uppercase"><i class="bi bi-envelope-at-fill"></i> Correos Electrónicos</h6>
+                                </div>
+                                <div class="card-body bg-white">
+                                    @* Input Group para capturar rápido *@
+                                    <div class="input-group input-group-sm mb-3">
+                                        <input type="text" class="form-control" placeholder="Etiqueta (Ej. Facturas)" @bind="tempEmail.Etiqueta" style="max-width: 30%;">
+                                        <input type="text" class="form-control" placeholder="correo@ejemplo.com" @bind="tempEmail.Email">
+                                        <button class="btn btn-success fw-bold" type="button" @onclick="AgregarEmail">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+
+                                    @* Tabla de Emails *@
+                                    <div class="table-responsive border rounded">
+                                        <table class="table table-sm table-striped mb-0 small align-middle">
+                                            <thead class="table-light text-muted text-uppercase">
+                                                <tr><th>Etiqueta</th><th>Email</th><th class="text-center" style="width:50px;">x</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in cliente.Emails)
+                                                {
+                                                    <tr>
+                                                        <td class="text-muted fst-italic">@item.Etiqueta</td>
+                                                        <td class="fw-bold text-dark">@item.Email</td>
+                                                        <td class="text-center">
+                                                            <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => cliente.Emails.Remove(item)"><i class="bi bi-trash"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (!cliente.Emails.Any())
+                                                {
+                                                    <tr><td colspan="3" class="text-center text-muted py-2">Sin correos.</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* COLUMNA DERECHA: TELÉFONOS *@
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-header bg-white py-2 border-bottom">
+                                    <h6 class="mb-0 fw-bold text-secondary small text-uppercase"><i class="bi bi-telephone-fill"></i> Teléfonos</h6>
+                                </div>
+                                <div class="card-body bg-white">
+                                    @* Input Group para capturar rápido *@
+                                    <div class="input-group input-group-sm mb-3">
+                                        <input type="text" class="form-control" placeholder="Etiqueta (Ej. Móvil)" @bind="tempTel.Etiqueta" style="max-width: 30%;">
+                                        <input type="text" class="form-control" placeholder="55 1234 5678" @bind="tempTel.Numero">
+                                        <button class="btn btn-success fw-bold" type="button" @onclick="AgregarTelefono">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+
+                                    @* Tabla de Teléfonos *@
+                                    <div class="table-responsive border rounded">
+                                        <table class="table table-sm table-striped mb-0 small align-middle">
+                                            <thead class="table-light text-muted text-uppercase">
+                                                <tr><th>Etiqueta</th><th>Número</th><th class="text-center" style="width:50px;">x</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in cliente.Telefonos)
+                                                {
+                                                    <tr>
+                                                        <td class="text-muted fst-italic">@item.Etiqueta</td>
+                                                        <td class="fw-bold text-dark">@item.Numero</td>
+                                                        <td class="text-center">
+                                                            <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => cliente.Telefonos.Remove(item)"><i class="bi bi-trash"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (!cliente.Telefonos.Any())
+                                                {
+                                                    <tr><td colspan="3" class="text-center text-muted py-2">Sin teléfonos.</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> @* Fin Row *@
+                </div> @* Fin Modal Body *@
+
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4" @onclick="Guardar">
+                        <i class="bi bi-save"></i> GUARDAR CLIENTE
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ClienteDto>? ListaClientes;
+    private ClienteDto cliente = new();
+    private bool mostrarModal = false;
+
+
+    private ClienteEmail tempEmail = new();
+    private ClienteTelefono tempTel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        ListaClientes = await Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes");
+    }
+
+    private void AbrirModalNuevo()
+    {
+        // IMPORTANTE: Inicializar listas para evitar NullReference
+        cliente = new() { Activo = true, Emails = new(), Telefonos = new() };
+        ResetTemporales();
+        mostrarModal = true;
+    }
+
+    private void AgregarEmail()
+    {
+        if (string.IsNullOrEmpty(tempEmail.Email))
+        {
+            MostrarToast("Escribe un correo electrónico", SweetAlertIcon.Warning);
+            return;
+        }
+        cliente.Emails.Add(tempEmail);
+        tempEmail = new(); // Limpiar y romper referencia
+    }
+
+    private void AgregarTelefono()
+    {
+        if (string.IsNullOrEmpty(tempTel.Numero))
+        {
+            MostrarToast("Escribe un número telefónico", SweetAlertIcon.Warning);
+            return;
+        }
+        cliente.Telefonos.Add(tempTel);
+        tempTel = new(); // Limpiar y romper referencia
+    }
+
+    private void ResetTemporales()
+    {
+        tempEmail = new();
+        tempTel = new();
+    }
+
+    private void Editar(ClienteDto item)
+    {
+        cliente = new ClienteDto
+        {
+            ClienteId = item.ClienteId,
+            RFC = item.RFC,
+            RazonSocial = item.RazonSocial,
+            NombreContacto = item.NombreContacto,
+            FechaRegistro = item.FechaRegistro,
+            Activo = item.Activo,
+
+           
+            Emails = item.Emails != null ? item.Emails.ToList() : new(),
+            Telefonos = item.Telefonos != null ? item.Telefonos.ToList() : new()
+        };
+
+        mostrarModal = true;
+    }
+
+    private void CerrarModal() => mostrarModal = false;
+
+    private async Task Guardar()
+    {
+        // Validaciones Manuales (Estilo Toast)
+        if (string.IsNullOrEmpty(cliente.RFC) || cliente.RFC.Length < 12)
+        {
+            await MostrarToast("El RFC es inválido u obligatorio", SweetAlertIcon.Warning);
+            return;
+        }
+        if (string.IsNullOrEmpty(cliente.RazonSocial))
+        {
+            await MostrarToast("La Razón Social es obligatoria", SweetAlertIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response;
+            if (cliente.ClienteId > 0)
+                response = await Http.PutAsJsonAsync($"api/clientes/{cliente.ClienteId}", cliente);
+            else
+                response = await Http.PostAsJsonAsync("api/clientes", cliente);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await MostrarToast("Cliente guardado correctamente", SweetAlertIcon.Success);
+                await CargarClientes();
+                CerrarModal();
+            }
+            else
+            {
+                await MostrarToast("Error al guardar", SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast($"Error: {ex.Message}", SweetAlertIcon.Error);
+        }
+    }
+
+    private async Task Eliminar(ClienteDto item)
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Eliminar Cliente?",
+            Text = $"Se dará de baja a: {item.RazonSocial}",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, eliminar",
+            CancelButtonText = "Cancelar"
+        });
+
+        if (result.IsConfirmed)
+        {
+            var response = await Http.DeleteAsync($"api/clientes/{item.ClienteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await MostrarToast("Cliente eliminado", SweetAlertIcon.Success);
+                await CargarClientes();
+            }
+            else
+            {
+                await MostrarToast("No se pudo eliminar", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    // Tu helper favorito
+    private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
+    {
+        await Swal.FireAsync(new SweetAlertOptions
+        {
+            Toast = true,
+            Position = SweetAlertPosition.TopEnd,
+            ShowConfirmButton = false,
+            Timer = 2000,          
+            Icon = icono,
+            Title = mensaje
+        });
+    }
+}

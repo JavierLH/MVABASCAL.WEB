@@ -3,27 +3,32 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
 
-<div class="page">
+<div class="page @(menuColapsado ? "menu-minimized" : "")">
     <div class="sidebar">
-        <NavMenu />
+        <NavMenu ToggleSidebar="ToggleMenu" MenuColapsado="@menuColapsado" />
     </div>
 
     <main>
-        <div class="top-row px-4 auth-bar">
-            <AuthorizeView>
-                <Authorized>
-                    <span class="me-3 text-dark">
-                        Hola, <strong>@context.User.Identity?.Name</strong>
-                    </span>
+        <div class="top-row px-4 auth-bar d-flex justify-content-between align-items-center">
 
-                    <button class="btn btn-outline-danger btn-sm" @onclick="Salir">
-                        Cerrar Sesión <i class="bi bi-box-arrow-right"></i>
-                    </button>
-                </Authorized>
-                <NotAuthorized>
-                    <a href="login" class="btn btn-link">Ingresar</a>
-                </NotAuthorized>
-            </AuthorizeView>
+           
+
+            <div>
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="me-3 text-dark">
+                            Hola, <strong>@context.User.Identity?.Name</strong>
+                        </span>
+
+                        <button class="btn btn-outline-danger btn-sm" @onclick="Salir">
+                            Cerrar Sesión <i class="bi bi-box-arrow-right"></i>
+                        </button>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="login" class="btn btn-link">Ingresar</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
         </div>
 
         <article class="content px-4">
@@ -33,15 +38,18 @@
 </div>
 
 @code {
+    // Variable para controlar el estado del menú
+    private bool menuColapsado = false;
+
+    private void ToggleMenu()
+    {
+        menuColapsado = !menuColapsado;
+    }
+
     private async Task Salir()
     {
-        // Convertimos el proveedor genérico a NUESTRO proveedor personalizado
         var customAuthProvider = (CustomAuthStateProvider)AuthStateProvider;
-
-        // Ejecutamos la limpieza
         await customAuthProvider.CerrarSesion();
-
-        // Redirigimos al Login forzando la recarga para limpiar memoria
         NavManager.NavigateTo("/login", forceLoad: true);
     }
 }

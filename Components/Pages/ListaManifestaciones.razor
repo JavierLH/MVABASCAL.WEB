@@ -1,143 +1,165 @@
 ﻿@page "/manifestaciones"
-@using SistemaAduanero.Web.Models
-@inject SweetAlertService Swal
-
 @using Microsoft.AspNetCore.Authorization
+@using SistemaAduanero.Shared.DTOs.SistemaAduanero.Shared.DTOs;
 @inject HttpClient Http
-@inject IJSRuntime JsRuntime
-@rendermode InteractiveServer
+@inject NavigationManager NavManager
+@inject SweetAlertService Swal
 @attribute [Authorize]
 
-<div class="container mt-4">
-    
-    <h3> <i class="bi bi-card-list"></i> Listado de Manifestaciones de Valor</h3>
-    <p class="text-muted">Gestión de trámites aduaneros VUCEM</p>
-
-    <div class="text-end mb-3">
-        <a href="manifestaciones/nueva" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Nueva
-        </a>
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0 fw-bold text-primary">Expedientes de Valor</h3>
+            <p class="text-muted small">Listado de manifestaciones registradas</p>
+        </div>
+        <button class="btn btn-primary" @onclick="IrANueva">
+            <i class="bi bi-plus-lg"></i> Nuevo Expediente
+        </button>
     </div>
-
 
     @if (manifestaciones == null)
     {
-        <p><em>Cargando pedimentos...</em></p>
+        <div class="d-flex justify-content-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
     }
-    else if (!manifestaciones.Any())
+    else if (manifestaciones.Count == 0)
     {
-        <div class="alert alert-info">No hay manifestaciones registradas aún.</div>
+        <div class="alert alert-info text-center shadow-sm border-0">
+            <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+            <strong>No hay expedientes registrados.</strong>
+            <p class="mb-0 mt-2">Haz clic en "Nuevo Expediente" para comenzar.</p>
+        </div>
     }
     else
     {
-        <table class="table table-striped table-hover shadow-sm">
-            <thead class="table-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Pedimento</th>
-                    <th>COVE</th>
-                    <th>Valor Aduana</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in manifestaciones)
-                {
-                    <tr>
-                        <td>@item.ManifestacionId</td>
-                        <td>@item.NumeroPedimento</td>
-                        <td>@item.Cove</td>
-                        <td>
-                            @item.TotalValorAduana.ToString("C2", System.Globalization.CultureInfo.CreateSpecificCulture("es-MX"))
-                        </td>
-                        <td>
-                            <span class="badge @(item.EstadoEnvio == "BORRADOR" ? "bg-warning" : "bg-success")">
-                                @item.EstadoEnvio
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <div class="btn-group" role="group">
-
-                                <a href="manifestaciones/editar/@item.ManifestacionId" class="btn btn-outline-primary btn-sm" title="Editar Expediente">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
-
-                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => EliminarManifestacion(item.ManifestacionId)" title="Eliminar Expediente">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
-
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Pedimento</th>
+                                <th>RFC Importador</th>
+                                <th class="text-end">Valor Aduana</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Fecha Registro</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in manifestaciones)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">
+                                        @item.NumeroPedimento
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.RfcImportador))
+                                        {
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="bi bi-person-badge"></i> @item.RfcImportador
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">N/D</span>
+                                        }
+                                    </td>
+                                    <td class="text-end fw-bold">
+                                        @((item.TotalValorAduana ?? 0).ToString("C2"))
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.EstadoEnvio == "ENVIADO")
+                                        {
+                                            <span class="badge bg-success">Enviado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Borrador</span>
+                                        }
+                                    </td>
+                                    <td class="text-center small text-muted">
+                                        @* Si agregaste FechaRegistro al DTO *@
+                                        @item.FechaRegistro?.ToShortDateString()
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(item.ManifestacionId)" title="Editar">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(item)" title="Eliminar">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     }
 </div>
 
 @code {
+    // Usamos una clase local o extendemos el DTO si faltan propiedades de visualización
+    // Asumo que ManifestacionDto ya tiene lo básico que agregamos.
     private List<ManifestacionDto>? manifestaciones;
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarManifestaciones();
+        await CargarDatos();
     }
 
-    private async Task CargarManifestaciones()
+    private async Task CargarDatos()
     {
         try
         {
-            // Ajusta la ruta si tu API tiene otro nombre
             manifestaciones = await Http.GetFromJsonAsync<List<ManifestacionDto>>("api/ManifestacionesValor");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error al cargar: {ex.Message}");
+            await Swal.FireAsync("Error", "No se pudieron cargar los datos.", SweetAlertIcon.Error);
         }
     }
 
-    private async Task EliminarManifestacion(int id)
+    private void IrANueva()
     {
-        // 1. Confirmación sencilla con JavaScript (opcional)
-        //bool confirmado = await JsRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro de eliminar este expediente? Se borrarán también sus COVEs.");
+        NavManager.NavigateTo("/manifestaciones/nueva");
+    }
 
-        // 1. Recibes el objeto completo (NO es un bool todavía)
-       
+    private void Editar(int id)
+    {
+        NavManager.NavigateTo($"/manifestaciones/editar/{id}");
+    }
 
-        var resultado = await Swal.FireAsync(new SweetAlertOptions
+    private async Task Eliminar(ManifestacionDto item)
+    {
+        var confirm = await Swal.FireAsync(new SweetAlertOptions
         {
-            Title = "Advertencia",
-            Text = "¿Estás seguro de eliminar este expediente? Se borrarán también sus COVEs.",
+            Title = "¿Estás seguro?",
+            Text = $"Se eliminará el expediente {item.NumeroPedimento} y todos sus documentos.",
             Icon = SweetAlertIcon.Warning,
             ShowCancelButton = true,
-            CancelButtonColor = "#d33",
-            CancelButtonText= "Cancelar",
-            ConfirmButtonText = "Confirmar"
+            ConfirmButtonText = "Sí, eliminar",
+            CancelButtonText = "Cancelar"
         });
-        bool confirmado = resultado.IsConfirmed;
 
-        if (confirmado)
+        if (confirm.IsConfirmed)
         {
-            try
+            var response = await Http.DeleteAsync($"api/ManifestacionesValor/{item.ManifestacionId}");
+            if (response.IsSuccessStatusCode)
             {
-                // 2. Llamada a la API (Necesitas crear este Endpoint en el Controller si no existe)
-                var respuesta = await Http.DeleteAsync($"api/ManifestacionesValor/{id}");
-
-                if (respuesta.IsSuccessStatusCode)
-                {
-                    // 3. Recargar la lista visualmente
-                    await CargarManifestaciones();
-                }
-                else
-                {
-                    // Manejo de error sencillo
-                    Console.WriteLine("No se pudo eliminar.");
-                }
+                await Swal.FireAsync("Eliminado", "El registro ha sido eliminado.", SweetAlertIcon.Success);
+                await CargarDatos(); // Recargar lista
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                await Swal.FireAsync("Error", "No se pudo eliminar el registro.", SweetAlertIcon.Error);
             }
         }
     }
