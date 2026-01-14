@@ -52,6 +52,7 @@ namespace SistemaAduanero.Web.Auth
 
         public void MarkUserAsAuthenticated(string token)
         {
+            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", token);
             var authenticatedUser = new ClaimsPrincipal(new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt"));
             var authState = Task.FromResult(new AuthenticationState(authenticatedUser));
             NotifyAuthenticationStateChanged(authState);
@@ -86,14 +87,16 @@ namespace SistemaAduanero.Web.Auth
         // Método para cerrar sesión manualmente
         public async Task CerrarSesion()
         {
-            // 1. Borrar Token del navegador
             await _localStorage.RemoveItemAsync("authToken");
+
+            // --- CORRECCIÓN AQUÍ ---
+            // Limpiamos la cabecera INMEDIATAMENTE para que la siguiente petición falle o sea anónima
             _http.DefaultRequestHeaders.Authorization = null;
-            // 2. Avisar a Blazor que el estado cambió a "Anónimo" (Vacío)
-            var identity = new ClaimsIdentity();
-            var user = new ClaimsPrincipal(identity);
-            var state = new AuthenticationState(user);
-            NotifyAuthenticationStateChanged(Task.FromResult(state));
+            // -----------------------
+
+            var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
+            var authState = Task.FromResult(new AuthenticationState(anonymousUser));
+            NotifyAuthenticationStateChanged(authState);
         }
     }
 }

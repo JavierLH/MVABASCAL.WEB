@@ -4,8 +4,8 @@
 @using SistemaAduanero.Shared.DTOs
 
 <div class="container-fluid mt-4">
-    <div class="card shadow-sm border-0">
-        @* HEADER AZUL ESTANDAR *@
+    @* === SECCIÓN 1: CABECERA Y BUSCADOR === *@
+    <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-people-fill"></i>
@@ -16,6 +16,24 @@
             </button>
         </div>
 
+        @* Barra de Búsqueda (NUEVO) *@
+        <div class="card-body bg-light border-bottom">
+            <div class="row g-2">
+                <div class="col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0"
+                               placeholder="Buscar por RFC o Razón Social..."
+                               @bind="filtros.BusquedaTexto"
+                               @bind:event="oninput"
+                               @onkeyup="@(e => { if (e.Key == "Enter") CargarClientes(1); })" />
+                        <button class="btn btn-primary fw-bold" @onclick="() => CargarClientes(1)">BUSCAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* === SECCIÓN 2: TABLA DE DATOS === *@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0 small align-middle">
@@ -24,28 +42,26 @@
                             <th class="ps-3 py-2">RFC</th>
                             <th class="py-2">Razón Social</th>
                             <th class="py-2">Contacto</th>
-                           
                             <th class="text-center py-2">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (ListaClientes == null)
+                        @if (respuesta == null)
                         {
-                            <tr><td colspan="5" class="text-center py-3">Cargando...</td></tr>
+                            <tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div> Cargando...</td></tr>
                         }
-                        else if (!ListaClientes.Any())
+                        else if (respuesta.Elementos.Count == 0)
                         {
-                            <tr><td colspan="5" class="text-center py-3 text-muted">No hay clientes registrados.</td></tr>
+                            <tr><td colspan="4" class="text-center py-4 text-muted">No se encontraron clientes.</td></tr>
                         }
                         else
                         {
-                            @foreach (var cliente in ListaClientes)
+                            @foreach (var cliente in respuesta.Elementos)
                             {
                                 <tr>
                                     <td class="ps-3 fw-bold text-primary">@cliente.RFC</td>
                                     <td>@cliente.RazonSocial</td>
                                     <td>@cliente.NombreContacto</td>
-                                   
                                     <td class="text-center">
                                         <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(cliente)">
                                             <i class="bi bi-pencil-square"></i>
@@ -61,15 +77,35 @@
                 </table>
             </div>
         </div>
+
+        @* === SECCIÓN 3: PAGINADOR (NUEVO) === *@
+        @if (respuesta != null && respuesta.TotalPaginas >= 1)
+        {
+            <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+                <small class="text-muted">Total: <strong>@respuesta.TotalRegistros</strong> registros</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(filtros.Pagina == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CargarClientes(filtros.Pagina - 1)">Anterior</button>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link bg-light text-dark border-0 mx-2">Pag. @filtros.Pagina de @respuesta.TotalPaginas</span>
+                        </li>
+                        <li class="page-item @(filtros.Pagina >= respuesta.TotalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CargarClientes(filtros.Pagina + 1)">Siguiente</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     </div>
 </div>
 
-@* === MODAL (ESTANDARIZADO Y ACTUALIZADO) === *@
+@* === MODAL (TU CÓDIGO ORIGINAL INTACTO) === *@
 @if (mostrarModal)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog modal-xl">
-            @* Hice el modal más ancho (modal-xl) *@
             <div class="modal-content shadow-lg">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fs-6 text-uppercase fw-bold">
@@ -79,8 +115,7 @@
                 </div>
 
                 <div class="modal-body bg-light">
-
-                    @* 1. DATOS GENERALES (MASTER) *@
+                    @* 1. DATOS GENERALES *@
                     <div class="card border-0 shadow-sm p-3 mb-3">
                         <h6 class="text-primary fw-bold text-uppercase border-bottom pb-2 mb-3 small">Datos Generales</h6>
                         <div class="row g-3">
@@ -101,7 +136,6 @@
 
                     @* 2. DETALLES (EMAILS Y TELÉFONOS) *@
                     <div class="row g-3">
-
                         @* COLUMNA IZQUIERDA: EMAILS *@
                         <div class="col-md-6">
                             <div class="card shadow-sm border-0 h-100">
@@ -109,30 +143,21 @@
                                     <h6 class="mb-0 fw-bold text-secondary small text-uppercase"><i class="bi bi-envelope-at-fill"></i> Correos Electrónicos</h6>
                                 </div>
                                 <div class="card-body bg-white">
-                                    @* Input Group para capturar rápido *@
                                     <div class="input-group input-group-sm mb-3">
-                                        <input type="text" class="form-control" placeholder="Etiqueta (Ej. Facturas)" @bind="tempEmail.Etiqueta" style="max-width: 30%;">
+                                        <input type="text" class="form-control" placeholder="Etiqueta" @bind="tempEmail.Etiqueta" style="max-width: 30%;">
                                         <input type="text" class="form-control" placeholder="correo@ejemplo.com" @bind="tempEmail.Email">
-                                        <button class="btn btn-success fw-bold" type="button" @onclick="AgregarEmail">
-                                            <i class="bi bi-plus-lg"></i>
-                                        </button>
+                                        <button class="btn btn-success fw-bold" type="button" @onclick="AgregarEmail"><i class="bi bi-plus-lg"></i></button>
                                     </div>
-
-                                    @* Tabla de Emails *@
                                     <div class="table-responsive border rounded">
                                         <table class="table table-sm table-striped mb-0 small align-middle">
-                                            <thead class="table-light text-muted text-uppercase">
-                                                <tr><th>Etiqueta</th><th>Email</th><th class="text-center" style="width:50px;">x</th></tr>
-                                            </thead>
+                                            <thead class="table-light text-muted text-uppercase"><tr><th>Etiqueta</th><th>Email</th><th class="text-center" style="width:50px;">x</th></tr></thead>
                                             <tbody>
                                                 @foreach (var item in cliente.Emails)
                                                 {
                                                     <tr>
                                                         <td class="text-muted fst-italic">@item.Etiqueta</td>
                                                         <td class="fw-bold text-dark">@item.Email</td>
-                                                        <td class="text-center">
-                                                            <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => cliente.Emails.Remove(item)"><i class="bi bi-trash"></i></button>
-                                                        </td>
+                                                        <td class="text-center"><button class="btn btn-link btn-sm text-danger p-0" @onclick="() => cliente.Emails.Remove(item)"><i class="bi bi-trash"></i></button></td>
                                                     </tr>
                                                 }
                                                 @if (!cliente.Emails.Any())
@@ -153,30 +178,21 @@
                                     <h6 class="mb-0 fw-bold text-secondary small text-uppercase"><i class="bi bi-telephone-fill"></i> Teléfonos</h6>
                                 </div>
                                 <div class="card-body bg-white">
-                                    @* Input Group para capturar rápido *@
                                     <div class="input-group input-group-sm mb-3">
-                                        <input type="text" class="form-control" placeholder="Etiqueta (Ej. Móvil)" @bind="tempTel.Etiqueta" style="max-width: 30%;">
+                                        <input type="text" class="form-control" placeholder="Etiqueta" @bind="tempTel.Etiqueta" style="max-width: 30%;">
                                         <input type="text" class="form-control" placeholder="55 1234 5678" @bind="tempTel.Numero">
-                                        <button class="btn btn-success fw-bold" type="button" @onclick="AgregarTelefono">
-                                            <i class="bi bi-plus-lg"></i>
-                                        </button>
+                                        <button class="btn btn-success fw-bold" type="button" @onclick="AgregarTelefono"><i class="bi bi-plus-lg"></i></button>
                                     </div>
-
-                                    @* Tabla de Teléfonos *@
                                     <div class="table-responsive border rounded">
                                         <table class="table table-sm table-striped mb-0 small align-middle">
-                                            <thead class="table-light text-muted text-uppercase">
-                                                <tr><th>Etiqueta</th><th>Número</th><th class="text-center" style="width:50px;">x</th></tr>
-                                            </thead>
+                                            <thead class="table-light text-muted text-uppercase"><tr><th>Etiqueta</th><th>Número</th><th class="text-center" style="width:50px;">x</th></tr></thead>
                                             <tbody>
                                                 @foreach (var item in cliente.Telefonos)
                                                 {
                                                     <tr>
                                                         <td class="text-muted fst-italic">@item.Etiqueta</td>
                                                         <td class="fw-bold text-dark">@item.Numero</td>
-                                                        <td class="text-center">
-                                                            <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => cliente.Telefonos.Remove(item)"><i class="bi bi-trash"></i></button>
-                                                        </td>
+                                                        <td class="text-center"><button class="btn btn-link btn-sm text-danger p-0" @onclick="() => cliente.Telefonos.Remove(item)"><i class="bi bi-trash"></i></button></td>
                                                     </tr>
                                                 }
                                                 @if (!cliente.Telefonos.Any())
@@ -189,15 +205,12 @@
                                 </div>
                             </div>
                         </div>
-
-                    </div> @* Fin Row *@
-                </div> @* Fin Modal Body *@
+                    </div>
+                </div>
 
                 <div class="modal-footer bg-light border-top-0">
                     <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModal">Cancelar</button>
-                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4" @onclick="Guardar">
-                        <i class="bi bi-save"></i> GUARDAR CLIENTE
-                    </button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4" @onclick="Guardar"><i class="bi bi-save"></i> GUARDAR CLIENTE</button>
                 </div>
             </div>
         </div>
@@ -205,27 +218,43 @@
 }
 
 @code {
-    private List<ClienteDto>? ListaClientes;
+    // 1. CAMBIO PRINCIPAL: Usamos el DTO de Respuesta Paginada en vez de List<>
+    private PaginacionResponseDto<ClienteDto>? respuesta;
+    private PaginacionRequestDto filtros = new PaginacionRequestDto { RegistrosPorPagina = 10 };
+
+    // Variables del Modal (Se mantienen igual)
     private ClienteDto cliente = new();
     private bool mostrarModal = false;
-
-
     private ClienteEmail tempEmail = new();
     private ClienteTelefono tempTel = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarClientes();
+        await CargarClientes(1);
     }
 
-    private async Task CargarClientes()
+    // 2. ACTUALIZADO: Acepta número de página y usa los filtros
+    private async Task CargarClientes(int pagina)
     {
-        ListaClientes = await Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes");
+        try
+        {
+            filtros.Pagina = pagina;
+
+            // Construimos la URL con parámetros
+            var url = $"api/clientes?Pagina={filtros.Pagina}&RegistrosPorPagina={filtros.RegistrosPorPagina}";
+            if (!string.IsNullOrEmpty(filtros.BusquedaTexto)) url += $"&BusquedaTexto={filtros.BusquedaTexto}";
+
+            // Llamada a la API paginada
+            respuesta = await Http.GetFromJsonAsync<PaginacionResponseDto<ClienteDto>>(url);
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast($"Error al cargar: {ex.Message}", SweetAlertIcon.Error);
+        }
     }
 
     private void AbrirModalNuevo()
     {
-        // IMPORTANTE: Inicializar listas para evitar NullReference
         cliente = new() { Activo = true, Emails = new(), Telefonos = new() };
         ResetTemporales();
         mostrarModal = true;
@@ -233,34 +262,23 @@
 
     private void AgregarEmail()
     {
-        if (string.IsNullOrEmpty(tempEmail.Email))
-        {
-            MostrarToast("Escribe un correo electrónico", SweetAlertIcon.Warning);
-            return;
-        }
+        if (string.IsNullOrEmpty(tempEmail.Email)) { MostrarToast("Correo obligatorio", SweetAlertIcon.Warning); return; }
         cliente.Emails.Add(tempEmail);
-        tempEmail = new(); // Limpiar y romper referencia
+        tempEmail = new();
     }
 
     private void AgregarTelefono()
     {
-        if (string.IsNullOrEmpty(tempTel.Numero))
-        {
-            MostrarToast("Escribe un número telefónico", SweetAlertIcon.Warning);
-            return;
-        }
+        if (string.IsNullOrEmpty(tempTel.Numero)) { MostrarToast("Teléfono obligatorio", SweetAlertIcon.Warning); return; }
         cliente.Telefonos.Add(tempTel);
-        tempTel = new(); // Limpiar y romper referencia
-    }
-
-    private void ResetTemporales()
-    {
-        tempEmail = new();
         tempTel = new();
     }
 
+    private void ResetTemporales() { tempEmail = new(); tempTel = new(); }
+
     private void Editar(ClienteDto item)
     {
+        // Clonamos el objeto para edición
         cliente = new ClienteDto
         {
             ClienteId = item.ClienteId,
@@ -269,12 +287,9 @@
             NombreContacto = item.NombreContacto,
             FechaRegistro = item.FechaRegistro,
             Activo = item.Activo,
-
-           
             Emails = item.Emails != null ? item.Emails.ToList() : new(),
             Telefonos = item.Telefonos != null ? item.Telefonos.ToList() : new()
         };
-
         mostrarModal = true;
     }
 
@@ -282,17 +297,8 @@
 
     private async Task Guardar()
     {
-        // Validaciones Manuales (Estilo Toast)
-        if (string.IsNullOrEmpty(cliente.RFC) || cliente.RFC.Length < 12)
-        {
-            await MostrarToast("El RFC es inválido u obligatorio", SweetAlertIcon.Warning);
-            return;
-        }
-        if (string.IsNullOrEmpty(cliente.RazonSocial))
-        {
-            await MostrarToast("La Razón Social es obligatoria", SweetAlertIcon.Warning);
-            return;
-        }
+        if (string.IsNullOrEmpty(cliente.RFC) || cliente.RFC.Length < 12) { await MostrarToast("RFC inválido", SweetAlertIcon.Warning); return; }
+        if (string.IsNullOrEmpty(cliente.RazonSocial)) { await MostrarToast("Razón Social obligatoria", SweetAlertIcon.Warning); return; }
 
         try
         {
@@ -304,26 +310,25 @@
 
             if (response.IsSuccessStatusCode)
             {
-                await MostrarToast("Cliente guardado correctamente", SweetAlertIcon.Success);
-                await CargarClientes();
+                await MostrarToast("Guardado correctamente", SweetAlertIcon.Success);
                 CerrarModal();
+
+                // 3. IMPORTANTE: Recargamos la página actual de la tabla
+                await CargarClientes(filtros.Pagina);
             }
             else
             {
                 await MostrarToast("Error al guardar", SweetAlertIcon.Error);
             }
         }
-        catch (Exception ex)
-        {
-            await MostrarToast($"Error: {ex.Message}", SweetAlertIcon.Error);
-        }
+        catch (Exception ex) { await MostrarToast($"Error: {ex.Message}", SweetAlertIcon.Error); }
     }
 
     private async Task Eliminar(ClienteDto item)
     {
         var result = await Swal.FireAsync(new SweetAlertOptions
         {
-            Title = "¿Eliminar Cliente?",
+            Title = "¿Eliminar?",
             Text = $"Se dará de baja a: {item.RazonSocial}",
             Icon = SweetAlertIcon.Warning,
             ShowCancelButton = true,
@@ -336,8 +341,9 @@
             var response = await Http.DeleteAsync($"api/clientes/{item.ClienteId}");
             if (response.IsSuccessStatusCode)
             {
-                await MostrarToast("Cliente eliminado", SweetAlertIcon.Success);
-                await CargarClientes();
+                await MostrarToast("Eliminado correctamente", SweetAlertIcon.Success);
+                // Recargamos la tabla
+                await CargarClientes(filtros.Pagina);
             }
             else
             {
@@ -346,7 +352,6 @@
         }
     }
 
-    // Tu helper favorito
     private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
     {
         await Swal.FireAsync(new SweetAlertOptions
@@ -354,7 +359,7 @@
             Toast = true,
             Position = SweetAlertPosition.TopEnd,
             ShowConfirmButton = false,
-            Timer = 2000,          
+            Timer = 2000,
             Icon = icono,
             Title = mensaje
         });

@@ -17,6 +17,16 @@
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <script src="_framework/blazor.web.js"></script>
     <script src="_content/CurrieTechnologies.Razor.SweetAlert2/sweetAlert2.min.js"></script>
+    <script>
+        window.descargarArchivoDesdeBytes = (filename, base64Content) => {
+            var link = document.createElement('a');
+            link.download = filename;
+            link.href = "data:application/pdf;base64," + base64Content;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+    </script>
 </body>
 
 </html>

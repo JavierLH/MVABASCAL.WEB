@@ -28,9 +28,10 @@
         <div class="card-body bg-white">
             @* FILA 1: DATOS DE IDENTIFICACIÓN *@
             <div class="row g-3 mb-4">
+
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-muted">NÚMERO PEDIMENTO</label>
-                    <InputText class="form-control form-control-sm fw-bold text-primary" @bind-Value="manifestacion.ReferenciaAdmin" placeholder="Ej: 5000001" />
+                    <InputText class="form-control form-control-sm fw-bold text-primary" @bind-Value="manifestacion.ReferenciaAdmin" placeholder="Ej: 5000001" disabled="@bloquearCamposAA"/>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-bold text-muted">CLIENTE / IMPORTADOR *</label>
@@ -39,7 +40,8 @@
                     <InputSelect class="form-select form-select-sm"
                                  Value="clienteSeleccionadoId"
                                  ValueChanged="@((int id) => OnClienteSeleccionado(id))"
-                                 ValueExpression="@(() => clienteSeleccionadoId)">
+                                 ValueExpression="@(() => clienteSeleccionadoId)"
+                                 disabled="@bloquearCamposAA">
 
                         <option value="0">-- Seleccione Cliente --</option>
                         @if (ListaMisClientes != null)
@@ -123,29 +125,32 @@
                 </div>
                 <div class="card-body bg-light">
                     @* Formulario Agregar RFC *@
-                    <div class="card p-3 mb-3 border-0 shadow-sm">
-                        <div class="row g-2">
-                            <div class="col-12">
-                                <label class="form-label small fw-bold text-muted">RFC CONSULTA</label>
-                                <InputText class="form-control form-control-sm" @bind-Value="tempRfc.RfcConsulta" placeholder="Capturar RFC..." />
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label small fw-bold text-muted">TIPO FIGURA</label>
-                                <InputSelect class="form-select form-select-sm" @bind-Value="tempRfc.TipoFigura">
-                                    <option value="">-- Seleccione --</option>
-                                    @foreach (var tf in ListaTiposFigura)
-                                    {
-                                        <option value="@tf.Clave">@tf.Clave - @tf.Descripcion</option>
-                                    }
-                                </InputSelect>
-                            </div>
-                            <div class="col-12 mt-3">
-                                <button class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarRfcConsulta">
-                                    <i class="bi bi-plus-lg"></i> AGREGAR
-                                </button>
+                    @if (!bloquearCamposAA) 
+                    {
+                        <div class="card p-3 mb-3 border-0 shadow-sm">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">RFC CONSULTA</label>
+                                    <InputText class="form-control form-control-sm" @bind-Value="tempRfc.RfcConsulta" placeholder="Capturar RFC..." disabled="@bloquearCamposAA" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">TIPO FIGURA</label>
+                                    <InputSelect class="form-select form-select-sm" @bind-Value="tempRfc.TipoFigura" disabled="@bloquearCamposAA">
+                                        <option value="">-- Seleccione --</option>
+                                        @foreach (var tf in ListaTiposFigura)
+                                        {
+                                            <option value="@tf.Clave">@tf.Clave - @tf.Descripcion</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <button class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarRfcConsulta">
+                                        <i class="bi bi-plus-lg"></i> AGREGAR
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
 
                     @* Lista Standard *@
                     <ul class="list-group list-group-flush border rounded bg-white">
@@ -156,9 +161,12 @@
                                     <span class="fw-bold d-block small text-dark">@item.RfcConsulta</span>
                                     <span class="badge bg-light text-secondary border">@item.TipoFigura</span>
                                 </div>
-                                <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => manifestacion.Consultas.Remove(item)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                               @if(!bloquearCamposAA)
+                               {
+                                    <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => manifestacion.Consultas.Remove(item)" >
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
                             </li>
                         }
                         @if (manifestacion.Consultas.Count == 0)
@@ -297,11 +305,11 @@
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">NÚMERO COVE *</label>
-                                            <InputText class="form-control form-control-sm" @bind-Value="coveTemporal.NumeroCove" />
+                                            <InputText class="form-control form-control-sm" @bind-Value="coveTemporal.NumeroCove" disabled="@bloquearCamposAA" />
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">INCOTERM</label>
-                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.Incoterm">
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.Incoterm" disabled="@bloquearCamposAA">
                                                 <option value="">-- Seleccione --</option>
                                                 @foreach (var item in ListaIncoterms)
                                                 {
@@ -311,14 +319,14 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">VINCULACIÓN</label>
-                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.ExisteVinculacion">
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.ExisteVinculacion" disabled="@bloquearCamposAA">
                                                 <option value="false">NO</option>
                                                 <option value="true">SÍ</option>
                                             </InputSelect>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">MÉTODO VALORACIÓN</label>
-                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.MetodoValoracion">
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.MetodoValoracion" disabled="@bloquearCamposAA">
                                                 <option value="">-- Seleccione --</option>
                                                 @foreach (var item in ListaMetodosValoracion)
                                                 {
@@ -328,14 +336,14 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">ADUANA</label>
-                                            <InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.Aduana" />
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.Aduana" disabled="@bloquearCamposAA" />
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">PATENTE</label>
-                                            <InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.Patente" />
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="coveTemporal.Patente" disabled="@bloquearCamposAA" />
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label small fw-bold text-muted">PEDIMENTO INTERNO</label>
+                                            <label class="form-label small fw-bold text-muted">FACTURA</label>
                                             <InputText class="form-control form-control-sm" @bind-Value="coveTemporal.NumeroPedimento" />
                                         </div>
                                     </div>
@@ -653,6 +661,13 @@
 @code {
     [Parameter] public int? Id { get; set; }
 
+    //seguridad de campos
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthStateTask { get; set; }
+
+    // 2. VARIABLE DE CONTROL
+    private bool bloquearCamposAA = false;
+
     // MODELO PRINCIPAL (Ya sin TipoOperacion)
     private CrearManifestacionDto manifestacion = new CrearManifestacionDto();
 
@@ -686,8 +701,18 @@
     private List<CatalogoDto> ListaTiposFigura = new();
     private List<CatalogoDto> ListaMonedas = new();
 
+    
+
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateTask;
+        var user = authState.User;
+
+        if (user.IsInRole("Cliente"))
+        {
+            bloquearCamposAA = true;
+        }
+        // 1. Carga inicial de catálogos y clientes
         await CargarCatalogos();
         try
         {
@@ -698,7 +723,15 @@
             Console.WriteLine("Error cargando clientes: " + ex.Message);
         }
         ResetTemporales();
+
+        // 2. CORRECCIÓN: Si hay ID, cargamos el expediente para editar
+        if (Id.HasValue)
+        {
+            await CargarExpediente(Id.Value);
+        }
     }
+
+
     private void OnClienteSeleccionado(int id)
     {
         clienteSeleccionadoId = id;
@@ -738,22 +771,41 @@
             var res = await Http.GetFromJsonAsync<ManifestacionDto>($"api/ManifestacionesValor/{id}");
             if (res != null)
             {
+                // === MAPEO DE DATOS GENERALES ===
                 manifestacion.ReferenciaAdmin = res.NumeroPedimento;
-                manifestacion.RfcImportador = res.RfcImportador; // Viene del DTO de lectura (Mapeado desde Cliente)
+                manifestacion.RfcImportador = res.RfcImportador;
 
-                // Mapeo Totales
+                // IMPORTANTE: Recuperar el Cliente seleccionado para el Dropdown
+                // Asegúrate que tu ManifestacionDto en el BackEnd traiga esta propiedad 'ClienteId'
+                if (res.ClienteId > 0)
+                {
+                    clienteSeleccionadoId = res.ClienteId; // Esto actualiza el <InputSelect>
+                    manifestacion.ClienteId = res.ClienteId;
+
+                    // Buscamos el objeto cliente completo para mostrar el RFC en el input readonly
+                    manifestacion.Cliente = ListaMisClientes.FirstOrDefault(c => c.ClienteId == res.ClienteId);
+                }
+
+                // === MAPEO TOTALES ===
                 manifestacion.TotalPrecioPagado = res.TotalPrecioPagado ?? 0;
                 manifestacion.TotalPrecioPorPagar = res.TotalPrecioPorPagar ?? 0;
                 manifestacion.TotalIncrementables = res.TotalIncrementables ?? 0;
                 manifestacion.TotalDecrementables = res.TotalDecrementables ?? 0;
                 manifestacion.TotalValorAduana = res.TotalValorAduana ?? 0;
 
-                // Mapeo Consultas RFC
-                manifestacion.Consultas = res.Consultas.Select(c => new ConsultaRfcDto { RfcConsulta = c.RfcConsulta, TipoFigura = c.TipoFigura }).ToList();
+                // === MAPEO CONSULTAS RFC ===
+                manifestacion.Consultas = res.Consultas.Select(c => new ConsultaRfcDto
+                {
+                    RfcConsulta = c.RfcConsulta,
+                    TipoFigura = c.TipoFigura
+                }).ToList();
 
-                // Mapeo COVEs
+                // === MAPEO COVES (Tu código actual estaba bien aquí) ===
                 manifestacion.Coves = res.ManifestacionCoves.Select(c => new CoveDetalleDto
                 {
+                    // Truco: Generamos un ID temporal para que el front no se pierda al editar
+                    IdTemporal = Guid.NewGuid().ToString(),
+
                     NumeroCove = c.NumeroCove,
                     Incoterm = c.Incoterm,
                     Aduana = c.Aduana ?? 0,
@@ -766,6 +818,7 @@
                     PreciosPorPagar = c.PreciosPorPagar,
                     Compensaciones = c.Compensaciones,
 
+                    // Recuperar Incrementables y Decrementables separados
                     Incrementables = c.ConceptosValor?.Where(x => x.TipoConcepto == "INCREMENTABLE").Select(x => new ConceptoValorDto
                     {
                         TipoIncrementable = x.ClaveConcepto,
@@ -787,8 +840,11 @@
                 }).ToList();
             }
         }
-        catch (Exception ex) { await Swal.FireAsync("Error", "No se pudo cargar: " + ex.Message, SweetAlertIcon.Error); }
-    }
+        catch (Exception ex)
+        {
+            await Swal.FireAsync("Error", "No se pudo cargar: " + ex.Message, SweetAlertIcon.Error);
+        }
+    } 
 
     // === GESTIÓN DE LISTAS Y MODAL ===
     private void AgregarRfcConsulta() { if (!string.IsNullOrEmpty(tempRfc.RfcConsulta) && !string.IsNullOrEmpty(tempRfc.TipoFigura)) { manifestacion.Consultas.Add(new ConsultaRfcDto { RfcConsulta = tempRfc.RfcConsulta, TipoFigura = tempRfc.TipoFigura }); tempRfc = new(); } }
