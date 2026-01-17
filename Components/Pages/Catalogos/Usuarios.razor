@@ -16,6 +16,23 @@
             </button>
         </div>
 
+        @* === BARRA DE BÚSQUEDA (NUEVO) === *@
+        <div class="card-body bg-light border-bottom">
+            <div class="row g-2">
+                <div class="col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0"
+                               placeholder="Buscar por Nombre o Usuario..."
+                               @bind="filtros.BusquedaTexto"
+                               @bind:event="oninput"
+                               @onkeyup="@(e => { if (e.Key == "Enter") CargarUsuarios(1); })" />
+                        <button class="btn btn-primary fw-bold" @onclick="() => CargarUsuarios(1)">BUSCAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0 small align-middle">
@@ -24,53 +41,37 @@
                             <th class="ps-3 py-2">Usuario</th>
                             <th>Nombre Completo</th>
                             <th>Rol</th>
-                            <th>Clientes Asignados</th>
+                            
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (ListaUsuarios == null)
+                        @if (respuesta == null)
                         {
-                            <tr><td colspan="5" class="text-center py-3">Cargando...</td></tr>
+                            <tr><td colspan="5" class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div> Cargando...</td></tr>
+                        }
+                        else if (respuesta.Elementos.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center py-4 text-muted">No se encontraron usuarios.</td></tr>
                         }
                         else
                         {
-                            @foreach (var u in ListaUsuarios)
+                            @foreach (var item in respuesta.Elementos)
                             {
                                 <tr>
-                                    <td class="ps-3 fw-bold text-primary">@u.Username</td>
-                                    <td>@u.NombreCompleto</td>
+                                    <td class="ps-3 fw-bold text-primary">@item.Username</td>
+                                    <td>@item.NombreCompleto</td>
                                     <td>
-                                        <span class="badge bg-secondary">@u.Rol?.NombreRol</span>
+                                        <span class="badge bg-light text-dark border">
+                                            @(item.Rol != null ? item.Rol.NombreRol : "Sin Rol")
+                                        </span>
                                     </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            @* Lógica para mostrar resumen de clientes *@
-                                            @if (u.UsuarioClientes != null && u.UsuarioClientes.Any())
-                                            {
-                                                var nombres = u.UsuarioClientes.Select(uc => uc.Cliente?.RazonSocial).Where(n => n != null).ToArray();
-                                                @if (nombres.Length > 2)
-                                                {
-                                                    <span title="@string.Join("\n", nombres)">
-                                                        @string.Join(", ", nombres.Take(2))... (+@(nombres.Length - 2))
-                                                    </span>
-                                                }
-                                                else
-                                                {
-                                                    @string.Join(", ", nombres)
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <span class="text-danger fst-italic">Sin asignar</span>
-                                            }
-                                        </small>
-                                    </td>
+                                    
                                     <td class="text-center">
-                                        <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(u)">
+                                        <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(item)">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
-                                        <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => Eliminar(u)">
+                                        <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => Eliminar(item)">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </td>
@@ -81,6 +82,27 @@
                 </table>
             </div>
         </div>
+
+        @* === PAGINADOR (NUEVO) === *@
+        @if (respuesta != null && respuesta.TotalPaginas >= 1)
+        {
+            <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+                <small class="text-muted">Total: <strong>@respuesta.TotalRegistros</strong> usuarios</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(filtros.Pagina == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CargarUsuarios(filtros.Pagina - 1)">Anterior</button>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link bg-light text-dark border-0 mx-2">Pag. @filtros.Pagina de @respuesta.TotalPaginas</span>
+                        </li>
+                        <li class="page-item @(filtros.Pagina >= respuesta.TotalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CargarUsuarios(filtros.Pagina + 1)">Siguiente</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     </div>
 </div>
 
@@ -176,6 +198,8 @@
 
 @code {
     // 1. Listas Maestras
+    private PaginacionResponseDto<Usuario>? respuesta; 
+    private PaginacionRequestDto filtros = new PaginacionRequestDto { RegistrosPorPagina = 10 };
     private List<Usuario>? ListaUsuarios;
     private List<Role> ListaRoles = new();
     private List<ClienteDto> ListaTodosClientes = new();
@@ -188,30 +212,32 @@
     // 3. Carga Inicial
     protected override async Task OnInitializedAsync()
     {
-        await CargarDatosCompletos();
+        //await CargarDatosCompletos();
+        await CargarCatalogosIniciales();
+        await CargarUsuarios(1);
     }
 
-    private async Task CargarDatosCompletos()
-    {
-        try
-        {
-            // Ejecutamos las 3 llamadas en paralelo para ser más rápidos
-            var t1 = Http.GetFromJsonAsync<List<Usuario>>("api/usuarios");
-            var t2 = Http.GetFromJsonAsync<List<Role>>("api/roles"); // Verifica que tengas este controller
-            var t3 = Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes"); // Debe ser el GetClientes general
+    // private async Task CargarDatosCompletos()
+    // {
+    //     try
+    //     {
+    //         // Ejecutamos las 3 llamadas en paralelo para ser más rápidos
+    //         var t1 = Http.GetFromJsonAsync<List<Usuario>>("api/usuarios");
+    //         var t2 = Http.GetFromJsonAsync<List<Role>>("api/roles"); // Verifica que tengas este controller
+    //         var t3 = Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes/lista-simple");
 
-            await Task.WhenAll(t1, t2, t3);
+    //         await Task.WhenAll(t1, t2, t3);
 
-            ListaUsuarios = t1.Result ?? new();
-            ListaRoles = t2.Result ?? new();
-            ListaTodosClientes = t3.Result ?? new();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            await Swal.FireAsync("Error", "No se pudieron cargar los catálogos.", SweetAlertIcon.Error);
-        }
-    }
+    //         ListaUsuarios = t1.Result ?? new();
+    //         ListaRoles = t2.Result ?? new();
+    //         ListaTodosClientes = t3.Result ?? new();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine(ex.Message);
+    //         await MostrarToast("No se pudieron cargar los catálogos.", SweetAlertIcon.Error);
+    //     }
+    // }
 
     // 4. Modal y Edición
     private void AbrirModalNuevo()
@@ -219,6 +245,46 @@
         usuario = new() { Activo = true, RolId = 0, UsuarioClientes = new List<UsuarioCliente>() };
         ClientesSeleccionadosIds.Clear();
         mostrarModal = true;
+    }
+
+    private async Task CargarCatalogosIniciales()
+    {
+        try
+        {
+            // Aquí SÍ usamos tu lógica paralela con Task.WhenAll ¡Es excelente aquí!
+            var tRoles = Http.GetFromJsonAsync<List<Role>>("api/roles");
+            var tClientes = Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes/lista-simple");
+
+            await Task.WhenAll(tRoles, tClientes);
+
+            ListaRoles = tRoles.Result ?? new();
+            ListaTodosClientes = tClientes.Result ?? new();
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast("Error cargando catálogos: "+ex.Message ,SweetAlertIcon.Error);
+        }
+    }
+
+    private async Task CargarUsuarios(int pagina)
+    {
+        try
+        {
+            filtros.Pagina = pagina;
+
+            // Construimos URL con Query Strings
+           
+            var url = $"api/usuarios?Pagina={filtros.Pagina}&RegistrosPorPagina={filtros.RegistrosPorPagina}";
+            if (!string.IsNullOrEmpty(filtros.BusquedaTexto)) url += $"&BusquedaTexto={filtros.BusquedaTexto}";
+            
+
+            // Petición Paginada
+            respuesta = await Http.GetFromJsonAsync<PaginacionResponseDto<Usuario>>(url);
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast("No se pudieron cargar los usuarios: "+ex.Message, SweetAlertIcon.Error);
+        }
     }
 
     private void Editar(Usuario item)
@@ -263,18 +329,19 @@
         // Validaciones básicas
         if (string.IsNullOrEmpty(usuario.NombreCompleto) || string.IsNullOrEmpty(usuario.Username) || usuario.RolId == 0)
         {
-            await Swal.FireAsync("Faltan datos", "Verifica nombre, usuario y rol.", SweetAlertIcon.Warning);
+            await MostrarToast("Faltan datos: Verifica nombre, usuario y rol.", SweetAlertIcon.Warning);
+
             return;
         }
         if (usuario.UsuarioId == 0 && string.IsNullOrEmpty(usuario.PasswordSinEncriptar))
         {
-            await Swal.FireAsync("Contraseña Requerida", "Para usuarios nuevos debes asignar una contraseña.", SweetAlertIcon.Warning);
+            await MostrarToast("Contraseña Requerida: Para usuarios nuevos debes asignar una contraseña.", SweetAlertIcon.Warning);
             return;
         }
         if (ClientesSeleccionadosIds.Count == 0)
         {
             // Opcional: Advertencia si no asignó ningún cliente
-            // await Swal.FireAsync("Ojo", "No asignaste ningún cliente.", SweetAlertIcon.Info);
+            await MostrarToast("Ojo: No asignaste ningún cliente.", SweetAlertIcon.Info);
         }
 
         // PREPARAR EL OBJETO PARA ENVIAR AL BACKEND
@@ -295,19 +362,20 @@
 
             if (resp.IsSuccessStatusCode)
             {
-                await Swal.FireAsync("Guardado", "Usuario registrado correctamente.", SweetAlertIcon.Success);
-                await CargarDatosCompletos(); // Recargar tabla
+                await MostrarToast("Cambios aplicados correctamente.", SweetAlertIcon.Success);
+                //await CargarDatosCompletos(); // Recargar tabla
+                await CargarUsuarios(filtros.Pagina);
                 CerrarModal();
             }
             else
             {
-                var msg = await resp.Content.ReadAsStringAsync();
-                await Swal.FireAsync("Error al guardar", msg, SweetAlertIcon.Error);
+                var msg = await resp.Content.ReadAsStringAsync(); //TODO: implementar un log para guardar todos los errores. 
+                await MostrarToast("El usuario ya existe (o está desactivado). Intenta con otro nombre.", SweetAlertIcon.Error);
             }
         }
         catch (Exception ex)
         {
-            await Swal.FireAsync("Error Crítico", ex.Message, SweetAlertIcon.Error);
+            await MostrarToast("Error Crítico: "+ex.Message, SweetAlertIcon.Error);
         }
     }
 
@@ -315,6 +383,8 @@
 
     private async Task Eliminar(Usuario u)
     {
+
+
         var conf = await Swal.FireAsync(new SweetAlertOptions
         {
             Title = "¿Desactivar Usuario?",
@@ -327,7 +397,51 @@
         if (conf.IsConfirmed)
         {
             var resp = await Http.DeleteAsync($"api/usuarios/{u.UsuarioId}");
-            if (resp.IsSuccessStatusCode) await CargarDatosCompletos();
+            if (resp.IsSuccessStatusCode)
+            {
+                //await CargarDatosCompletos();
+                await CargarUsuarios(filtros.Pagina);
+
+                await MostrarToast("El usuario a sido desactivado", SweetAlertIcon.Success);
+
+            }
+            else
+            {
+                // Leer el error del backend (por ejemplo, si intentó borrarse a sí mismo)
+                var errorMsg = await resp.Content.ReadAsStringAsync();
+                await MostrarToast("Error"+  errorMsg, SweetAlertIcon.Error);
+            }
+
         }
+    }
+
+    private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
+    {
+        await Swal.FireAsync(new SweetAlertOptions
+        {
+            Toast = true,
+            Position = SweetAlertPosition.TopEnd, // Arriba a la derecha
+            ShowConfirmButton = false,
+            Timer = 3000,
+            Icon = icono,
+            Title = mensaje
+        });
+    }
+
+    private async Task<bool> Confirmar(string titulo, string mensaje, string textoBoton)
+    {
+        var resultado = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = titulo,
+            Text = mensaje,
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = textoBoton,
+            CancelButtonText = "Cancelar",
+            ConfirmButtonColor = "#d33", // Color rojo estándar para acciones destructivas
+            CancelButtonColor = "#3085d6"
+        });
+
+        return resultado.IsConfirmed;
     }
 }

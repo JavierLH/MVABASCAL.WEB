@@ -66,7 +66,7 @@
         // Validar extensión
         if (!archivo.Name.ToLower().EndsWith(".pdf"))
         {
-            await Swal.FireAsync("Archivo Incorrecto", "Solo se permiten archivos PDF.", SweetAlertIcon.Warning);
+            await MostrarToast("Archivo Incorrecto: Solo se permiten archivos PDF.", SweetAlertIcon.Warning);
             return;
         }
 
@@ -79,7 +79,7 @@
             StateHasChanged(); // Forzar renderizado para mostrar spinner
 
             using var content = new MultipartFormDataContent();
-            
+
             // Leemos el archivo del cliente
             // Nota: maxFileSize es importante aquí para que Blazor no rechace el archivo antes de enviarlo
             var fileContent = new StreamContent(archivo.OpenReadStream(maxFileSize));
@@ -92,36 +92,43 @@
             if (response.IsSuccessStatusCode)
             {
                 var fileBytes = await response.Content.ReadAsByteArrayAsync();
-                
+
                 // Nombre sugerido para la descarga
                 var nombreDescarga = Path.GetFileNameWithoutExtension(archivo.Name) + "_VUCEM.pdf";
 
                 // Descarga JS
                 await JS.InvokeVoidAsync("descargarArchivoDesdeBytes", nombreDescarga, Convert.ToBase64String(fileBytes));
 
-                await Swal.FireAsync(new SweetAlertOptions
-                {
-                    Title = "¡Listo!",
-                    Text = "El archivo se ha optimizado y descargado correctamente.",
-                    Icon = SweetAlertIcon.Success,
-                    Timer = 3000,
-                    ShowConfirmButton = false
-                });
+                await MostrarToast("¡Listo! El archivo se ha optimizado y descargado correctamente.", SweetAlertIcon.Success);
+               
             }
             else
             {
                 // Leemos el error que nos mandó el Backend (ej. "No se pudo reducir...")
                 var msjError = await response.Content.ReadAsStringAsync();
-                await Swal.FireAsync("Error al procesar", msjError, SweetAlertIcon.Error);
+                await MostrarToast("Error al procesar: "+msjError, SweetAlertIcon.Error);
             }
         }
         catch (Exception ex)
         {
-            await Swal.FireAsync("Error de Conexión", $"No se pudo enviar el archivo: {ex.Message}", SweetAlertIcon.Error);
+            await MostrarToast("Error de Conexión: No se pudo enviar el archivo: " +ex.Message, SweetAlertIcon.Error);
         }
         finally
         {
             procesando = false;
         }
+    }
+
+    private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
+    {
+        await Swal.FireAsync(new SweetAlertOptions
+        {
+            Toast = true,
+            Position = SweetAlertPosition.TopEnd, // Arriba a la derecha
+            ShowConfirmButton = false,
+            Timer = 3000,
+            Icon = icono,
+            Title = mensaje
+        });
     }
 }

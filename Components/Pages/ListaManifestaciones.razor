@@ -203,7 +203,7 @@
         }
         catch (Exception ex)
         {
-            await Swal.FireAsync("Error", "No se pudieron cargar los datos: " + ex.Message, SweetAlertIcon.Error);
+            await MostrarToast("Error: No se pudieron cargar los datos: " + ex.Message, SweetAlertIcon.Error);
         }
     }
 
@@ -234,14 +234,27 @@
             var res = await Http.DeleteAsync($"api/ManifestacionesValor/{item.ManifestacionId}");
             if (res.IsSuccessStatusCode)
             {
-                await Swal.FireAsync("Eliminado", "Registro eliminado.", SweetAlertIcon.Success);
+                await MostrarToast("Registro eliminado.", SweetAlertIcon.Success);
                 // Recargamos la misma página donde estábamos
                 await CargarDatos(filtros.Pagina);
             }
             else
             {
-                await Swal.FireAsync("Error", "No se pudo eliminar.", SweetAlertIcon.Error);
+                await MostrarToast("No se pudo eliminar.", SweetAlertIcon.Error);
             }
         }
+    }
+
+    private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
+    {
+        await Swal.FireAsync(new SweetAlertOptions
+        {
+            Toast = true,
+            Position = SweetAlertPosition.TopEnd, // Arriba a la derecha
+            ShowConfirmButton = false,
+            Timer = 3000,
+            Icon = icono,
+            Title = mensaje
+        });
     }
 }

@@ -11,13 +11,12 @@ main {
 
 .sidebar {
     background-color: #1e1e2d;
-    overflow-x: hidden; /* Vital para que no se vea el contenido mientras se encoge */
+    overflow-x: hidden;
 }
 
 .top-row {
     background-color: #f7f7f7;
     border-bottom: 1px solid #d6d5d5;
-    /* CAMBIO: De flex-end a space-between para que el botón quede a la izquierda */
     justify-content: space-between;
     height: 3.5rem;
     display: flex;
@@ -35,40 +34,42 @@ main {
         height: 100vh;
         position: sticky;
         top: 0;
-        transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Curva más suave */
+        transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         display: flex;
         flex-direction: column;
     }
 
-    /* ESTADO MINIMIZADO */
+    /* === ESTADO MINIMIZADO (HAMBURGUESA) === */
     .menu-minimized .sidebar {
         width: 70px !important;
     }
 
-        /* Ocultar texto y chevrons suavemente */
+        /* 1. Ocultar textos y flechas */
         .menu-minimized .sidebar ::deep .nav-text,
         .menu-minimized .sidebar ::deep .bi-chevron-down,
         .menu-minimized .sidebar ::deep .bi-chevron-right,
         .menu-minimized .sidebar ::deep .navbar-brand {
             opacity: 0;
             pointer-events: none;
-            position: absolute; /* Sacarlos del flujo para que no ocupen espacio invisible */
+            position: absolute;
             left: -999px;
-            transition: opacity 0.1s ease-out; /* Desaparecen rápido */
         }
 
-        /* Ajuste de iconos al minimizar */
+        /* 2. CORRECCIÓN: Centrar los iconos en el espacio de 70px */
         .menu-minimized .sidebar ::deep .nav-item .nav-link {
-            justify-content: center;
-            padding-left: 0 !important; /* Forzar reset del padding */
+            justify-content: center !important; /* Centra el icono */
+            padding-left: 0 !important;
             padding-right: 0 !important;
         }
 
-        /* Resetear sangría de submenús al minimizar para que el icono se centre */
+        /* 3. CORRECCIÓN CRÍTICA: Eliminar la sangría (ps-5) de los submenús */
+        /* Esto evita que se vayan "al lazo izquierdo" o se vean desalineados */
         .menu-minimized .sidebar ::deep .nav-item.ps-5 {
-            padding-left: 0 !important;
+            padding-left: 0 !important; /* Reseteamos la sangría a 0 */
+            padding-right: 0 !important;
         }
 
+    /* Ajuste del header superior */
     .top-row {
         position: sticky;
         top: 0;

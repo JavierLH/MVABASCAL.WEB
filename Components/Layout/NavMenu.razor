@@ -11,58 +11,118 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
-        <AuthorizeView>
+        @* === INICIO === *@
+        <div class="nav-item px-3">
+            <NavLink class="nav-link text-white" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span>
+                <span class="nav-text">Inicio</span>
+            </NavLink>
+        </div>
+        <AuthorizeView Roles="Admin" Context="authAdmin">
+            <Authorized>           
+                @* === 1. GRUPO ADMINISTRACIÓN === *@
+                <div class="nav-item px-3 mt-2">
+                    @* CORRECCIÓN: Agregamos 'text-white' y reseteamos line-height con estilo inline para centrar *@
+                    <div class="nav-link d-flex align-items-center text-white" @onclick="ToggleAdministracion" style="cursor: pointer;">
+
+                        @* Icono centrado manualmente *@
+                        <span class="bi bi-gear-fill d-flex align-items-center justify-content-center"
+                              aria-hidden="true"
+                              style="line-height: 1;"></span>
+
+                        @* Texto con line-height normal para que flexbox lo centre *@
+                        <span class="nav-text flex-grow-1" style="line-height: normal;">Administración</span>
+
+                        @* Chevron *@
+                        <span class="bi @(expandAdministracion ? "bi-chevron-down" : "bi-chevron-right") small ms-auto d-flex align-items-center"
+                              style="line-height: 1;"></span>
+                    </div>
+                </div>
+
+                @if (expandAdministracion)
+                {
+                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
+                        <NavLink class="nav-link text-white" href="clientes">
+                            <span class="bi bi-person-gear" aria-hidden="true"></span>
+                            <span class="nav-text" style="line-height: normal;">Clientes</span>
+                        </NavLink>
+                    </div>
+
+                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
+                        <NavLink class="nav-link text-white" href="usuarios">
+                            <span class="bi bi-person-gear" aria-hidden="true"></span>
+                            <span class="nav-text" style="line-height: normal;">Usuarios</span>
+                        </NavLink>
+                    </div>
+                }
+            </Authorized>
+        </AuthorizeView>
+         <AuthorizeView Roles="Admin, Capturista" Context="authAdmin">
             <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span>
-                        <span class="nav-text">Inicio</span>
-                    </NavLink>
+                @* === 2. GRUPO UTILIDADES === *@
+                <div class="nav-item px-3 mt-2">
+                    <div class="nav-link d-flex align-items-center text-white" @onclick="ToggleUtilidades" style="cursor: pointer;">
+                        <span class="bi bi-tools d-flex align-items-center justify-content-center"
+                              aria-hidden="true"
+                              style="line-height: 1;"></span>
+                        <span class="nav-text flex-grow-1" style="line-height: normal;">Utilidades</span>
+                        <span class="bi @(expandUtilidades ? "bi-chevron-down" : "bi-chevron-right") small ms-auto d-flex align-items-center"
+                              style="line-height: 1;"></span>
+                    </div>
                 </div>
 
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="clientes">
-                        <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span>
-                        <span class="nav-text">Clientes</span>
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <div class="nav-link d-flex align-items-center" @onclick="ToggleManifestaciones">
+                @if (expandUtilidades)
+                {
+                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
+                        <NavLink class="nav-link text-white" href="herramientas/convertidor-vucem">
+                            <span class="bi bi-file-earmark-pdf" aria-hidden="true"></span>
+                            <span class="nav-text" style="line-height: normal;">Convertidor</span>
+                        </NavLink>
+                    </div>
+                }
+            </Authorized>
+        </AuthorizeView>
+                @* === 3. GRUPO MANIFESTACIONES === *@
+                <div class="nav-item px-3 mt-2">
+                    <div class="nav-link d-flex align-items-center text-white" @onclick="ToggleManifestaciones" style="cursor: pointer;">
                         <span class="bi bi-folder2-open-nav-menu" aria-hidden="true"></span>
-                        <span class="nav-text flex-grow-1">Manifestaciones</span>
-                        <span class="bi @(expandManifestaciones ? "bi-chevron-down" : "bi-chevron-right") small ms-auto"></span>
+                        <span class="nav-text flex-grow-1" style="line-height: normal;">Manifestaciones</span>
+                        <span class="bi @(expandManifestaciones ? "bi-chevron-down" : "bi-chevron-right") small ms-auto d-flex align-items-center"
+                              style="line-height: 1;"></span>
                     </div>
                 </div>
 
                 @if (expandManifestaciones)
                 {
                     <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
-                        <NavLink class="nav-link" href="manifestaciones">
-                            <span class="bi bi-list-ul-nav-menu" aria-hidden="true"></span>
-                            <span class="nav-text">Ver Listado</span>
+                        <NavLink class="nav-link text-white" href="manifestaciones">
+                            <span class="bi bi-list-task" aria-hidden="true"></span>
+                            <span class="nav-text" style="line-height: normal;">Ver Listado</span>
                         </NavLink>
                     </div>
                     <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
-                        <NavLink class="nav-link" href="manifestaciones/nueva">
-                            <span class="bi bi-plus-square-nav-menu" aria-hidden="true"></span>
-                            <span class="nav-text">Crear Nueva</span>
+                        <NavLink class="nav-link text-white" href="manifestaciones/nueva">
+                            <span class="bi bi-file-earmark-plus" aria-hidden="true"></span>
+                            <span class="nav-text" style="line-height: normal;">Crear Nueva</span>
                         </NavLink>
                     </div>
                 }
-            </Authorized>
-        </AuthorizeView>
+
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
-    private bool expandManifestaciones = false;
 
-    [Parameter] public bool MenuColapsado { get; set; } // Recibir estado del padre
+    private bool expandManifestaciones = false;
+    private bool expandAdministracion = false;
+    private bool expandUtilidades = false;
+
+    [Parameter] public bool MenuColapsado { get; set; }
     [Parameter] public EventCallback ToggleSidebar { get; set; }
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
 
     private void ToggleNavMenu()
     {
@@ -71,13 +131,21 @@
 
     private async Task ToggleManifestaciones()
     {
-        // MEJORA: Si el menú está cerrado y queremos abrir el submenú,
-        // forzamos la apertura del sidebar para que el usuario vea qué está abriendo.
-        if (MenuColapsado)
-        {
-            await ToggleSidebar.InvokeAsync();
-        }
-
+        if (MenuColapsado) await ToggleSidebar.InvokeAsync();
         expandManifestaciones = !expandManifestaciones;
     }
+
+    private async Task ToggleAdministracion()
+    {
+        if (MenuColapsado) await ToggleSidebar.InvokeAsync();
+        expandAdministracion = !expandAdministracion;
+    }
+
+    private async Task ToggleUtilidades()
+    {
+        if (MenuColapsado) await ToggleSidebar.InvokeAsync();
+        expandUtilidades = !expandUtilidades;
+    }
+
+
 }

@@ -313,7 +313,6 @@
                 await MostrarToast("Guardado correctamente", SweetAlertIcon.Success);
                 CerrarModal();
 
-                // 3. IMPORTANTE: Recargamos la página actual de la tabla
                 await CargarClientes(filtros.Pagina);
             }
             else

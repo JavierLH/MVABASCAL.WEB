@@ -11,6 +11,37 @@
     <link rel="stylesheet" href="SistemaAduanero.Web.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <style>
+        /* PARCHE CORREGIDO: Solo afecta al Menú Lateral (.sidebar) */
+
+        /* 1. Sombra y Borde Activo (SOLO EN SIDEBAR) */
+        /* Agregamos ".sidebar" al inicio para que no toque tus Modales/Tabs */
+        .sidebar .nav-item .nav-link:hover {
+            background-color: rgba(255,255,255,0.1) !important;
+            box-shadow: 0 4px 4px rgba(0,0,0,0.25);
+        }
+
+        .sidebar .nav-item .nav-link.active {
+            background-color: rgba(255,255,255,0.15) !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            border-left: 4px solid #6ea8fe !important;
+        }
+
+        /* 2. Forzar centrado cuando está minimizado */
+        .menu-minimized .sidebar .nav-item.ps-5 {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 3. Ocultar textos cuando está minimizado */
+        .menu-minimized .sidebar .nav-text,
+        .menu-minimized .sidebar .bi-chevron-down,
+        .menu-minimized .sidebar .bi-chevron-right {
+            display: none !important;
+        }
+    </style>
 </head>
 
 <body>

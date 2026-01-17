@@ -720,7 +720,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error cargando clientes: " + ex.Message);
+            MostrarToast("Error cargando clientes: " + ex.Message, SweetAlertIcon.Error);
         }
         ResetTemporales();
 
@@ -842,7 +842,7 @@
         }
         catch (Exception ex)
         {
-            await Swal.FireAsync("Error", "No se pudo cargar: " + ex.Message, SweetAlertIcon.Error);
+            await MostrarToast("No se pudo cargar: " + ex.Message, SweetAlertIcon.Error);
         }
     } 
 
@@ -951,7 +951,7 @@
     {
         if (string.IsNullOrEmpty(manifestacion.ReferenciaAdmin))
         {
-            await Swal.FireAsync("Atención", "Falta el Número de Pedimento.", SweetAlertIcon.Warning); return;
+            await MostrarToast("Falta el Número de Pedimento.", SweetAlertIcon.Warning); return;
         }
 
         try
@@ -962,16 +962,16 @@
 
             if (resp.IsSuccessStatusCode)
             {
-                await Swal.FireAsync("Éxito", "Guardado correctamente", SweetAlertIcon.Success);
+                await MostrarToast("Guardado correctamente", SweetAlertIcon.Success);
                 NavManager.NavigateTo("/manifestaciones");
             }
             else
             {
                 var err = await resp.Content.ReadAsStringAsync();
-                await Swal.FireAsync("Error", err, SweetAlertIcon.Error);
+                await MostrarToast("Error"+err, SweetAlertIcon.Error);
             }
         }
-        catch (Exception ex) { await Swal.FireAsync("Error", ex.Message, SweetAlertIcon.Error); }
+        catch (Exception ex) { await MostrarToast("Error: "+ex.Message, SweetAlertIcon.Error); }
     }
 
     private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
