@@ -9,8 +9,9 @@ using CurrieTechnologies.Razor.SweetAlert2;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 var apiUrl = "http://localhost:5207";
+//8081
+//5207";
 
 builder.Services.AddScoped(sp => new HttpClient
 {

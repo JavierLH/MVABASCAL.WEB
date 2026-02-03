@@ -2,7 +2,7 @@
 @inject HttpClient Http
 @inject SweetAlertService Swal
 @using SistemaAduanero.Shared.DTOs
-
+@attribute [Authorize] 
 <div class="container-fluid mt-4">
     @* === SECCIÓN 1: CABECERA Y BUSCADOR === *@
     <div class="card shadow-sm border-0 mb-4">

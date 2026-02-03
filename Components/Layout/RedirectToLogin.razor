@@ -1,10 +1,12 @@
 ﻿@inject NavigationManager Navigation
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Si intentas entrar a una zona prohibida, te mando al login
-        // y recuerdo a dónde querías ir (returnUrl)
-        Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(Navigation.Uri)}", forceLoad: true);
+        // firstRender asegura que solo lo haga una vez cuando el navegador ya pintó la página
+        if (firstRender)
+        {
+            Navigation.NavigateTo("login");
+        }
     }
 }

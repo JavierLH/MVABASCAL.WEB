@@ -57,7 +57,7 @@
                 }
             </Authorized>
         </AuthorizeView>
-         <AuthorizeView Roles="Admin, Capturista" Context="authAdmin">
+         <AuthorizeView Roles="Admin, AA" Context="authAdmin">
             <Authorized>
                 @* === 2. GRUPO UTILIDADES === *@
                 <div class="nav-item px-3 mt-2">
@@ -82,6 +82,8 @@
                 }
             </Authorized>
         </AuthorizeView>
+         <AuthorizeView Roles="Admin,AA,Cliente" Context="authAll">
+            <Authorized>
                 @* === 3. GRUPO MANIFESTACIONES === *@
                 <div class="nav-item px-3 mt-2">
                     <div class="nav-link d-flex align-items-center text-white" @onclick="ToggleManifestaciones" style="cursor: pointer;">
@@ -100,13 +102,11 @@
                             <span class="nav-text" style="line-height: normal;">Ver Listado</span>
                         </NavLink>
                     </div>
-                    <div class="nav-item px-3 ps-5 animate__animated animate__fadeInLeft animate__faster">
-                        <NavLink class="nav-link text-white" href="manifestaciones/nueva">
-                            <span class="bi bi-file-earmark-plus" aria-hidden="true"></span>
-                            <span class="nav-text" style="line-height: normal;">Crear Nueva</span>
-                        </NavLink>
-                    </div>
+                   
+
                 }
+            </Authorized>
+        </AuthorizeView>
 
     </nav>
 </div>

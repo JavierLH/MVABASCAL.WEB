@@ -1,5 +1,7 @@
 ﻿@page "/manifestaciones"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @using SistemaAduanero.Shared.DTOs
 @using SistemaAduanero.Shared.DTOs.SistemaAduanero.Shared.DTOs
 @inject HttpClient Http
@@ -13,9 +15,12 @@
             <h3 class="mb-0 fw-bold text-primary">Expedientes de Valor</h3>
             <p class="text-muted small">Listado de manifestaciones registradas</p>
         </div>
-        <button class="btn btn-primary" @onclick="IrANueva">
-            <i class="bi bi-plus-lg"></i> Nuevo Expediente
-        </button>
+        @if (!bloquearCamposAA) 
+          {
+            <button class="btn btn-primary" @onclick="IrANueva">
+                <i class="bi bi-plus-lg"></i> Nuevo Expediente
+            </button>
+          }
     </div>
 
     <div class="card shadow-sm border-0 mb-4 bg-light">
@@ -30,10 +35,10 @@
                     <input type="date" class="form-control form-control-sm" @bind="filtros.FechaFin" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Buscar por Pedimento</label>
+                    <label class="form-label small fw-bold text-muted">Buscar por pedimento /cliente / referencia</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" placeholder="Ej: 5000001" @bind="filtros.BusquedaTexto" @bind:event="oninput" @onkeyup="@(e => { if (e.Key == "Enter") CargarDatos(1); })" />
+                        <input type="text" class="form-control" placeholder="Ej: 5000001 .. o Nombre Cliente" @bind="filtros.BusquedaTexto" @bind:event="oninput" @onkeyup="@(e => { if (e.Key == "Enter") CargarDatos(1); })" />
                     </div>
                 </div>
                 <div class="col-md-2">
@@ -69,8 +74,9 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light small text-uppercase">
                             <tr>
-                                <th class="ps-4">Pedimento</th>
-                                <th>RFC Importador</th>
+                                <th>Referencia</th>
+                                 <th class="ps-4">Pedimento</th>
+                                <th>Cliente</th>
                                 <th class="text-end">Valor Aduana</th>
                                 <th class="text-center">Estado</th>
                                 <th class="text-center">Fecha Registro</th>
@@ -82,26 +88,27 @@
                             @foreach (var item in respuesta.Elementos)
                             {
                                 <tr>
-                                    <td class="ps-4 fw-bold text-primary">@item.NumeroPedimento</td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(item.RfcImportador))
+                                    
+                                    <td class="ps-4 fw-bold text-primary">
+                                        @if (!string.IsNullOrEmpty(item.Referencia))
                                         {
-                                            <span class="badge bg-light text-dark border">
-                                                <i class="bi bi-person-badge"></i> @item.RfcImportador
-                                            </span>
+                                             @item.Referencia
                                         }
                                         else
                                         {
-                                            <span class="text-muted small">N/D</span>
+                                            <span class="text-muted small">Sin referencia</span>
                                         }
                                     </td>
+                                    <td class="ps-4 fw-bold text-primary">@item.NumeroPedimento</td>
+                                    <td class="ps-4 fw-bold text-primary">  @item.RazonSocial </td>
+
                                     <td class="text-end fw-bold">
                                         @((item.TotalValorAduana ?? 0).ToString("C2"))
                                     </td>
                                     <td class="text-center">
-                                        @if (item.EstadoEnvio == "ENVIADO")
+                                        @if (item.EstadoEnvio == "COMPLETO")
                                         {
-                                            <span class="badge bg-success">Enviado</span>
+                                            <span class="badge bg-success">Completo</span>
                                         }
                                         else
                                         {
@@ -157,6 +164,11 @@
 </div>
 
 @code {
+    //seguridad de campos
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthStateTask { get; set; }
+    private bool bloquearCamposAA = false;
+
     // 1. Objeto para guardar los filtros que el usuario escribe
     private PaginacionRequestDto filtros = new PaginacionRequestDto();
 
@@ -166,8 +178,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        //configuracion de seguridad
+        var authState = await AuthStateTask;
+        var user = authState.User;
+
+        // Si es Cliente, activamos el bloqueo
+        if (user.IsInRole("Cliente"))
+        {
+            bloquearCamposAA = true;
+        }
         // Configuración inicial: Mostrar últimos 30 días o semana
-        filtros.FechaInicio = DateTime.Today.AddDays(-30);
+        filtros.FechaInicio = DateTime.Today.AddDays(-5);
         filtros.FechaFin = DateTime.Today;
 
         await CargarDatos(1);
