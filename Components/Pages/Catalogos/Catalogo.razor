@@ -1,7 +1,297 @@
 ﻿@page "/catalogo"
+@inject HttpClient Http
+@inject SweetAlertService Swal
 
-<h1>SALUDOS</h1>
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        @* HEADER AZUL ESTANDAR *@
+        <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-folder2-open"></i>
+                <h6 class="mb-0 fw-bold text-uppercase">Administración - Catálogo de Documentos</h6>
+            </div>
+            <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="AbrirModalNuevo">
+                <i class="bi bi-plus-lg"></i> Crear Nuevo Tipo de Documento
+            </button>
+        </div>
+
+        @* === BARRA DE BÚSQUEDA === *@
+        <div class="card-body bg-light border-bottom">
+            <div class="row g-2">
+                <div class="col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0"
+                               placeholder="Buscar por Nombre..."
+                               @bind="busquedaTexto"
+                               @bind:event="oninput"
+                               @onkeyup="@(e => { if (e.Key == "Enter") FiltrarLocal(); })" />
+                        <button class="btn btn-primary fw-bold" @onclick="FiltrarLocal">BUSCAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* === TABLA DE DATOS === *@
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 small align-middle">
+                    <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
+                        <tr>
+                            <th class="ps-3 py-2">Nombre del Documento</th>
+                            <th class="text-center">Obligatorio</th>
+                            <th class="text-center">Estatus</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (listaMostrar == null)
+                        {
+                            <tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div> Cargando...</td></tr>
+                        }
+                        else if (listaMostrar.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center py-4 text-muted">No se encontraron documentos.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in listaMostrar)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-dark">@item.NombreDocumento</td>
+                                    <td class="text-center">
+                                        <input class="form-check-input" type="checkbox" checked="@item.EsObligatorio" disabled />
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.Estatus)
+                                        {
+                                            <span class="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-3">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill px-3">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-light btn-sm text-primary p-1 me-2 shadow-sm" @onclick="() => Editar(item)" title="Editar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        @if (item.Estatus)
+                                        {
+                                            <button class="btn btn-light btn-sm text-danger p-1 shadow-sm" @onclick="() => Eliminar(item)" title="Eliminar (Desactivar)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-light btn-sm text-success p-1 shadow-sm" @onclick="() => Reactivar(item)" title="Reactivar">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @* === PAGINADOR (SIMULADO) === *@
+        <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+            <small class="text-muted">Total: <strong>@(listaMostrar?.Count ?? 0)</strong> registros en sistema.</small>
+        </div>
+    </div>
+</div>
+
+@* === MODAL DE CREACIÓN / EDICIÓN === *@
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0 rounded-3">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title fs-6 text-uppercase fw-bold">
+                        @(documentoActual.IdDocumento > 0 ? "Editar Tipo de Documento" : "Crear Tipo de Documento")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body bg-white p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted mb-1">Nombre del Documento</label>
+                        <input type="text" class="form-control" @bind="documentoActual.NombreDocumento" placeholder="Ej. Factura Comercial" />
+                    </div>
+
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="checkObligatorio" @bind="documentoActual.EsObligatorio">
+                        <label class="form-check-label text-dark user-select-none" for="checkObligatorio">
+                            ¿Es Obligatorio?
+                        </label>
+                    </div>
+
+                    
+                </div>
+                <div class="modal-footer bg-light border-top-0 py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4" @onclick="Guardar">
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
+    public class CatalogoDocumentoDto
+    {
+        public int IdDocumento { get; set; }
+        public string NombreDocumento { get; set; } = string.Empty;
+        public bool EsObligatorio { get; set; }
+        public bool Estatus { get; set; } = true;
+    }
 
+    private List<CatalogoDocumentoDto> listaOriginal = new();
+    private List<CatalogoDocumentoDto>? listaMostrar;
+    private CatalogoDocumentoDto documentoActual = new();
+    private bool mostrarModal = false;
+    private string busquedaTexto = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatosApi();
+    }
+
+    private async Task CargarDatosApi()
+    {
+        try
+        {
+            var data = await Http.GetFromJsonAsync<List<CatalogoDocumentoDto>>("api/Catalogos/documentos");
+            if (data != null)
+            {
+                listaOriginal = data;
+                FiltrarLocal();
+            }
+        }
+        catch (Exception)
+        {
+            await MostrarToast("Error al cargar la base de datos.", SweetAlertIcon.Error);
+        }
+    }
+
+    private void FiltrarLocal()
+    {
+        if (string.IsNullOrWhiteSpace(busquedaTexto))
+        {
+            listaMostrar = listaOriginal.ToList();
+        }
+        else
+        {
+            listaMostrar = listaOriginal
+                .Where(x => x.NombreDocumento.Contains(busquedaTexto, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void AbrirModalNuevo()
+    {
+        documentoActual = new CatalogoDocumentoDto { Estatus = true };
+        mostrarModal = true;
+    }
+
+    private void Editar(CatalogoDocumentoDto item)
+    {
+        documentoActual = new CatalogoDocumentoDto
+        {
+            IdDocumento = item.IdDocumento,
+            NombreDocumento = item.NombreDocumento,
+            EsObligatorio = item.EsObligatorio,
+            Estatus = item.Estatus
+        };
+        mostrarModal = true;
+    }
+
+    private void CerrarModal() => mostrarModal = false;
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(documentoActual.NombreDocumento))
+        {
+            await MostrarToast("El nombre del documento es obligatorio.", SweetAlertIcon.Warning);
+            return;
+        }
+
+        HttpResponseMessage response;
+
+        if (documentoActual.IdDocumento == 0)
+        {
+            documentoActual.Estatus = true; 
+            response = await Http.PostAsJsonAsync("api/Catalogos/documentos", documentoActual);
+        }
+        else
+        {
+            response = await Http.PutAsJsonAsync($"api/Catalogos/documentos/{documentoActual.IdDocumento}", documentoActual);
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            await CargarDatosApi();
+            await MostrarToast("Documento guardado.", SweetAlertIcon.Success);
+            CerrarModal();
+        }
+        else
+        {
+            await MostrarToast("Error al guardar.", SweetAlertIcon.Error);
+        }
+    }
+
+    private async Task Eliminar(CatalogoDocumentoDto item)
+    {
+        var conf = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Desactivar Documento?",
+            Text = $"El documento '{item.NombreDocumento}' pasará a estatus Inactivo.",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, desactivar",
+            CancelButtonText = "Cancelar",
+            ConfirmButtonColor = "#d33"
+        });
+
+        if (conf.IsConfirmed)
+        {
+            var response = await Http.DeleteAsync($"api/Catalogos/documentos/{item.IdDocumento}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await CargarDatosApi();
+                await MostrarToast("Documento Inactivado", SweetAlertIcon.Success);
+            }
+        }
+    }
+
+    private async Task Reactivar(CatalogoDocumentoDto item)
+    {
+        item.Estatus = true;
+        var response = await Http.PutAsJsonAsync($"api/Catalogos/documentos/{item.IdDocumento}", item);
+
+        if (response.IsSuccessStatusCode)
+        {
+            await CargarDatosApi();
+            await MostrarToast("Documento Reactivado", SweetAlertIcon.Success);
+        }
+    }
+
+    private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
+    {
+        await Swal.FireAsync(new SweetAlertOptions
+        {
+            Toast = true,
+            Position = SweetAlertPosition.TopEnd,
+            ShowConfirmButton = false,
+            Timer = 3000,
+            Icon = icono,
+            Title = mensaje
+        });
+    }
 }
