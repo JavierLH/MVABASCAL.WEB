@@ -1,4 +1,4 @@
-using Blazored.LocalStorage;
+ï»¿using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using SistemaAduanero.Web.Auth;
@@ -20,11 +20,11 @@ builder.Services.AddScoped(sp => new HttpClient
 // 1. Servicio de LocalStorage
 builder.Services.AddBlazoredLocalStorage();
 
-// 2. Servicio de Autenticación
+// 2. Servicio de Autenticaciï¿½n
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 
-// Configuración de Autenticación para soportar [Authorize]
+// Configuraciï¿½n de Autenticaciï¿½n para soportar [Authorize]
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
