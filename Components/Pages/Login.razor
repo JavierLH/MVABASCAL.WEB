@@ -6,6 +6,7 @@
 @using SistemaAduanero.Web.Models
 @using SistemaAduanero.Web.Auth
 @using Blazored.LocalStorage
+@using SistemaAduanero.Shared.DTOs
 @layout SistemaAduanero.Web.Components.Layout.LoginLayout
 @inject HttpClient Http
 @inject AuthenticationStateProvider AuthStateProvider
@@ -33,7 +34,9 @@
                     <label>Contraseña</label>
                     <input @bind="loginModel.Password" type="password" class="form-control" placeholder="******" />
                 </div>
-
+                <div class="mb-3 text-end">
+                    <a href="recuperar-password" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
+                </div>
                 <button class="btn btn-success w-100" @onclick="IniciarSesion">Ingresar</button>
             </div>
         </div>
@@ -60,7 +63,7 @@
             if (respuesta.IsSuccessStatusCode)
             {
                 // 2. Leemos el Token que nos mandó la API
-                var resultado = await respuesta.Content.ReadFromJsonAsync<RespuestaToken>();
+                var resultado = await respuesta.Content.ReadFromJsonAsync<LoginResponseDto>();
 
                 // 3. Guardamos en LocalStorage
                 await LocalStorage.SetItemAsync("authToken", resultado.token);
@@ -86,9 +89,5 @@
         }
     }
 
-    // Clasecita interna para leer la respuesta JSON { "token": "..." }
-    public class RespuestaToken
-    {
-        public string token { get; set; }
-    }
+   
 }
