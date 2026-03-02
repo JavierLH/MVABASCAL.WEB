@@ -8,6 +8,8 @@
 @inject NavigationManager NavManager
 @inject SweetAlertService Swal
 @attribute [Authorize]
+@inject IJSRuntime JS
+
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -185,14 +187,22 @@
                 </div>
 
                 <div class="modal-body bg-light">
-                    @* --- SECCIÓN 1: DATOS GENERALES --- *@
+                    @* --- SECCIÓN 1: DATOS DE LA MANIFESTACIÓN DE VALOR --- *@
                     <div class="card shadow-sm border-0 mb-4">
                         <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-info-circle-fill"></i> DATOS DE IDENTIFICACIÓN</h6>
+                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-info-circle-fill"></i> DATOS DE LA MANIFESTACIÓN DE VALOR</h6>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">RFC DEL IMPORTADOR</label>
+                                    <div class="form-control form-control-sm bg-white border-0 fw-bold">@(manifestacionSeleccionada.RfcImportador ?? "N/A")</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">NOMBRE O RAZÓN SOCIAL</label>
+                                    <div class="form-control form-control-sm bg-white border-0 fw-bold text-primary">@(manifestacionSeleccionada.RazonSocial ?? "N/A")</div>
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label small fw-bold text-muted">REFERENCIA</label>
                                     <div class="form-control form-control-sm bg-white border-0 fw-bold">@(manifestacionSeleccionada.Referencia ?? "N/A")</div>
                                 </div>
@@ -200,22 +210,15 @@
                                     <label class="form-label small fw-bold text-muted">NO. PEDIMENTO</label>
                                     <div class="form-control form-control-sm bg-white border-0 fw-bold text-primary">@manifestacionSeleccionada.NumeroPedimento</div>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-muted">CLIENTE / IMPORTADOR</label>
-                                    <div class="form-control form-control-sm bg-white border-0 fw-bold">@manifestacionSeleccionada.RazonSocial</div>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-muted">FECHA REGISTRO</label>
-                                    <div class="form-control form-control-sm bg-white border-0 fw-bold">@manifestacionSeleccionada.FechaRegistro?.ToShortDateString()</div>
-                                </div>
                             </div>
                         </div>
                     </div>
 
+
                     @* --- SECCIÓN 2: TOTALES --- *@
                     <div class="card shadow-sm border-0 mb-4">
                         <div class="card-header bg-white py-2">
-                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-calculator-fill"></i> TOTALES (VALOR EN ADUANA)</h6>
+                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-calculator-fill"></i> VALOR EN ADUANA (TOTALES)</h6>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
@@ -251,7 +254,7 @@
                     {
                         <div class="card shadow-sm border-0 mb-4">
                             <div class="card-header bg-white py-2">
-                                <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-people-fill"></i> PERSONAS CONSULTA (RFCs)</h6>
+                                <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-people-fill"></i> RFC's DE CONSULTA</h6>
                             </div>
                             <div class="card-body p-0">
                                 <table class="table table-sm table-striped mb-0">
@@ -307,49 +310,54 @@
                                             <div class="accordion-collapse collapse @(isExpanded ? "show" : "")">
                                                 <div class="accordion-body bg-white p-3">
 
-                                                    @* COVE: Generales *@
-                                                    <div class="row g-3 mb-3 bg-light p-3 rounded border">
-                                                        <div class="col-md-4">
+                                                    @* COVE: Información Acuse de Valor y Pedimentos *@
+                                                    <h6 class="text-secondary fw-bold border-bottom pb-1"><i class="bi bi-info-square me-1"></i> Información Acuse de Valor</h6>
+                                                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                                                        <div class="col-md-3">
                                                             <label class="form-label small fw-bold text-muted mb-0">NÚMERO COVE</label>
                                                             <div class="fw-bold text-dark fs-6">@(cove.NumeroCove ?? "N/A")</div>
                                                         </div>
-                                                        <div class="col-md-4">
+                                                        <div class="col-md-3">
+                                                            <label class="form-label small fw-bold text-muted mb-0">MÉTODO VALORACIÓN ADUANERA</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.MetodoValoracion ?? "N/A")</div>
+                                                        </div>
+                                                        <div class="col-md-3">
                                                             <label class="form-label small fw-bold text-muted mb-0">INCOTERM</label>
                                                             <div class="fw-bold text-dark fs-6">@(cove.Incoterm ?? "N/A")</div>
                                                         </div>
-                                                        <div class="col-md-4">
-                                                            <label class="form-label small fw-bold text-muted mb-0">VINCULACIÓN</label>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label small fw-bold text-muted mb-0">¿EXISTE VINCULACIÓN?</label>
                                                             <div class="fw-bold text-dark fs-6">@(cove.ExisteVinculacion == true ? "SÍ" : "NO")</div>
                                                         </div>
+                                                    </div>
+
+                                                    <h6 class="text-secondary fw-bold border-bottom pb-1"><i class="bi bi-file-earmark-check me-1"></i> Pedimentos</h6>
+                                                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
                                                         <div class="col-md-4">
-                                                            <label class="form-label small fw-bold text-muted mb-0">MÉTODO VALORACIÓN</label>
-                                                            <div class="fw-bold text-dark fs-6">@(cove.MetodoValoracion ?? "N/A")</div>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <label class="form-label small fw-bold text-muted mb-0">ADUANA</label>
-                                                            <div class="fw-bold text-dark fs-6">@(cove.Aduana ?? "N/A")</div>
+                                                            <label class="form-label small fw-bold text-muted mb-0">PEDIMENTO</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.NumeroPedimento ?? "N/A")</div>
                                                         </div>
                                                         <div class="col-md-4">
                                                             <label class="form-label small fw-bold text-muted mb-0">PATENTE</label>
                                                             <div class="fw-bold text-dark fs-6">@(cove.Patente ?? "N/A")</div>
                                                         </div>
                                                         <div class="col-md-4">
-                                                            <label class="form-label small fw-bold text-muted mb-0">FACTURA</label>
-                                                            <div class="fw-bold text-dark fs-6">@(cove.NumeroPedimento ?? "N/A")</div>
+                                                            <label class="form-label small fw-bold text-muted mb-0">ADUANA</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.Aduana ?? "N/A")</div>
                                                         </div>
                                                     </div>
 
 
-                                                    @* COVE: Listas Apiladas (Sustituyendo las Tabs) *@
 
+                                                    @* COVE: Listas Apiladas (Sustituyendo las Tabs) *@
                                                     @* Sección Pagados *@
                                                     @if (cove.PreciosPagados != null && cove.PreciosPagados.Any())
                                                     {
-                                                        <div class="mt-4 mb-2">
-                                                            <h6 class="text-primary fw-bold border-bottom pb-1"><i class="bi bi-cash-coin me-1"></i> Precios Pagados <span class="badge bg-secondary ms-1">@(cove.PreciosPagados.Count)</span></h6>
+                                                        <div class="mt-4 mb-3">
+                                                            <h6 class="text-primary fw-bold border-bottom pb-1"><i class="bi bi-cash-coin me-1"></i> Precio pagado <span class="badge bg-secondary ms-1">@(cove.PreciosPagados.Count)</span></h6>
                                                             <div class="table-responsive">
                                                                 <table class="table table-sm small table-bordered mb-0">
-                                                                    <thead class="table-light"><tr><th>Fecha</th><th>Forma Pago</th><th>Moneda</th><th>T.C.</th><th class="text-end">Total</th></tr></thead>
+                                                                    <thead class="table-light"><tr><th>Fecha de pago</th><th>Forma de pago</th><th>Tipo de moneda</th><th>Tipo de cambio</th><th class="text-end">Importe</th></tr></thead>
                                                                     <tbody>
                                                                         @foreach (var p in cove.PreciosPagados)
                                                                         {
@@ -364,11 +372,11 @@
                                                     @* Sección Por Pagar *@
                                                     @if (cove.PreciosPorPagar != null && cove.PreciosPorPagar.Any())
                                                     {
-                                                        <div class="mt-4 mb-2">
-                                                            <h6 class="text-danger fw-bold border-bottom pb-1"><i class="bi bi-clock-history me-1"></i> Precios Por Pagar <span class="badge bg-secondary ms-1">@(cove.PreciosPorPagar.Count)</span></h6>
+                                                        <div class="mt-4 mb-3">
+                                                            <h6 class="text-danger fw-bold border-bottom pb-1"><i class="bi bi-clock-history me-1"></i> Precio por pagar <span class="badge bg-secondary ms-1">@(cove.PreciosPorPagar.Count)</span></h6>
                                                             <div class="table-responsive">
                                                                 <table class="table table-sm small table-bordered mb-0">
-                                                                    <thead class="table-light"><tr><th>Fecha</th><th>Forma Pago</th><th>Moneda</th><th>T.C.</th><th class="text-end">Total</th><th>Comentarios</th></tr></thead>
+                                                                    <thead class="table-light"><tr><th>Fecha de pago</th><th>Forma de pago</th><th>Tipo de moneda</th><th>Tipo de cambio</th><th class="text-end">Importe</th><th>Momento(s) o situación</th></tr></thead>
                                                                     <tbody>
                                                                         @foreach (var p in cove.PreciosPorPagar)
                                                                         {
@@ -383,11 +391,11 @@
                                                     @* Sección Compensaciones *@
                                                     @if (cove.Compensaciones != null && cove.Compensaciones.Any())
                                                     {
-                                                        <div class="mt-4 mb-2">
-                                                            <h6 class="text-warning text-darken-3 fw-bold border-bottom pb-1"><i class="bi bi-arrow-left-right me-1"></i> Compensaciones <span class="badge bg-secondary ms-1">@(cove.Compensaciones.Count)</span></h6>
+                                                        <div class="mt-4 mb-3">
+                                                            <h6 class="text-warning text-darken-3 fw-bold border-bottom pb-1"><i class="bi bi-arrow-left-right me-1"></i> Compenso pago <span class="badge bg-secondary ms-1">@(cove.Compensaciones.Count)</span></h6>
                                                             <div class="table-responsive">
                                                                 <table class="table table-sm small table-bordered mb-0">
-                                                                    <thead class="table-light"><tr><th>Fecha</th><th>Motivo</th><th>Prestación</th><th>Tipo Pago</th></tr></thead>
+                                                                    <thead class="table-light"><tr><th>Fecha de pago</th><th>Motivo por lo que se realizó</th><th>Prestación de la mercancía</th><th>Forma de pago</th></tr></thead>
                                                                     <tbody>
                                                                         @foreach (var c in cove.Compensaciones)
                                                                         {
@@ -403,10 +411,10 @@
                                                     @if (cove.ConceptosValor != null && cove.ConceptosValor.Any())
                                                     {
                                                         <div class="mt-4 mb-0">
-                                                            <h6 class="text-info text-darken-2 fw-bold border-bottom pb-1"><i class="bi bi-calculator me-1"></i> Conceptos Valor (+/-) <span class="badge bg-secondary ms-1">@(cove.ConceptosValor.Count)</span></h6>
+                                                            <h6 class="text-info text-darken-2 fw-bold border-bottom pb-1"><i class="bi bi-calculator me-1"></i> Incrementables / Decrementables <span class="badge bg-secondary ms-1">@(cove.ConceptosValor.Count)</span></h6>
                                                             <div class="table-responsive">
                                                                 <table class="table table-sm small table-bordered mb-0">
-                                                                    <thead class="table-light"><tr><th class="text-center">+/-</th><th>Tipo</th><th>Fecha</th><th class="text-end">Importe</th><th>Moneda</th><th>T.C.</th><th>Cargo Imp.</th></tr></thead>
+                                                                    <thead class="table-light"><tr><th class="text-center">+/-</th><th>Tipo</th><th>Fecha erogación</th><th class="text-end">Importe</th><th>Tipo de moneda</th><th>Tipo de cambio</th><th>¿Cargo importador?</th></tr></thead>
                                                                     <tbody>
                                                                         @foreach (var c in cove.ConceptosValor)
                                                                         {
@@ -436,6 +444,7 @@
                                                         </div>
                                                     }
 
+
                                                     @if ((cove.PreciosPagados == null || !cove.PreciosPagados.Any()) &&
                                                                                             (cove.PreciosPorPagar == null || !cove.PreciosPorPagar.Any()) &&
                                                                                             (cove.Compensaciones == null || !cove.Compensaciones.Any()) &&
@@ -448,6 +457,8 @@
 
                                                 </div>
                                             </div>
+
+
                                         </div>
                                         coveIndex++;
                                     }
@@ -628,11 +639,25 @@
     {
         if (manifestacionSeleccionada != null)
         {
-            // Aquí llamarás a tu API o generador de PDF
-            // Ejemplo: await Http.GetAsync($"api/pdf/{manifestacionSeleccionada.ManifestacionId}");
-            await MostrarToast("Preparando PDF para descarga...", SweetAlertIcon.Info);
+            var url = $"api/ManifestacionesValor/{manifestacionSeleccionada.ManifestacionId}/pdf";
+            var response = await Http.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(bytes);
+                var fileName = $"ManifestacionValor_{manifestacionSeleccionada.NumeroPedimento}.pdf";
+
+                // Usa JS Interop para disparar la descarga en el navegador
+                await JS.InvokeVoidAsync("downloadFileFromBase64", base64, fileName, "application/pdf");
+            }
+            else
+            {
+                await MostrarToast("Error al generar el PDF.", SweetAlertIcon.Error);
+            }
         }
     }
+
 
     private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
     {
