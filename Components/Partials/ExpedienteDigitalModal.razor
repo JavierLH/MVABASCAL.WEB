@@ -1,0 +1,279 @@
+﻿@using SistemaAduanero.Shared.DTOs
+
+@if (Mostrar)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px);" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width: 95vw;">
+            <div class="modal-content border-0 shadow-lg" style="height: 90vh;">
+                <div class="modal-header bg-primary text-white py-2 border-bottom-0">
+                    <div class="container-fluid px-0">
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <h5 class="modal-title fw-bold text-uppercase fs-5">
+                                    <i class="bi bi-folder2-open me-2"></i> Expediente Digital
+                                </h5>
+
+                                <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 px-3 py-1 rounded-pill border border-white border-opacity-25">
+                                    <div class="progress bg-white bg-opacity-25" style="height: 6px; width: 80px;">
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: @(Progreso)%;"></div>
+                                    </div>
+                                    <span class="small fw-bold text-white" style="font-size: 0.7rem;">@Progreso%</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" @onclick="Cerrar"></button>
+                        </div>
+
+                        <div class="d-flex gap-4 small text-white text-opacity-75 bg-dark bg-opacity-10 rounded px-3 py-1" style="font-size: 0.85rem;">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-hash me-1 opacity-50"></i>
+                                <span class="fw-light me-1">Pedimento:</span>
+                                <strong class="text-white">@Pedimento</strong>
+                            </div>
+                            @if (!string.IsNullOrEmpty(Referencia))
+                            {
+                                <div class="vr opacity-25"></div>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-bookmark me-1 opacity-50"></i>
+                                    <span class="fw-light me-1">Ref:</span>
+                                    <strong class="text-white">@Referencia</strong>
+                                </div>
+                            }
+                            <div class="vr opacity-25"></div>
+                            <div class="d-flex align-items-center text-truncate">
+                                <i class="bi bi-building me-1 opacity-50"></i>
+                                <span class="fw-light me-1">Cliente:</span>
+                                <strong class="text-white text-truncate" style="max-width: 300px;">@Cliente</strong>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-body p-0 bg-light">
+                    <div class="row g-0 h-100">
+
+                        <div class="col-lg-9 h-100 overflow-auto bg-white">
+
+                            <div class="sticky-top bg-light border-bottom px-3 py-2 d-flex fw-bold text-muted text-uppercase small" style="z-index: 10;">
+                                <div style="flex: 2;">Documento</div>
+                                <div style="flex: 1; text-align: center;">Archivo</div>
+                                <div style="flex: 1; text-align: center;">Controles (AA)</div>
+                            </div>
+
+                            <div class="list-group list-group-flush">
+                                @foreach (var doc in Documentos)
+                                {
+                                    <div class="list-group-item px-3 py-2 border-bottom @(doc.Exento ? "bg-secondary bg-opacity-10" : "")">
+                                        <div class="d-flex align-items-center">
+
+                                            <div class="d-flex align-items-center gap-3 py-1" style="flex: 2;">
+
+                                                <div class="flex-shrink-0 text-center" style="width: 40px;">
+                                                    @if (doc.Exento)
+                                                    {
+                                                        <i class="bi bi-slash-circle fs-4 text-muted" title="Exento"></i>
+                                                    }
+                                                    else if (!string.IsNullOrEmpty(doc.NombreArchivo))
+                                                    {
+                                                        <i class="bi bi-file-earmark-pdf-fill fs-4 text-danger"></i>
+                                                    }
+                                                    else
+                                                    {
+
+                                                        <i class="bi bi-file-earmark fs-4 text-muted opacity-25"></i>
+                                                    }
+                                                </div>
+
+                                                <div style="min-width: 0;">
+                                                    <div class="fw-bold lh-sm @(doc.Exento ? "text-decoration-line-through text-muted" : "text-dark")">
+                                                        @doc.NombreDocumento
+                                                    </div>
+
+                                                    @if (doc.EsObligatorioCatalogo && !doc.Exento)
+                                                    {
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 mt-1" style="font-size: 0.6rem;">REQUERIDO</span>
+                                                    }
+
+                                                    @if (!string.IsNullOrEmpty(doc.NombreArchivo))
+                                                    {
+                                                        <small class="text-muted d-block text-break fst-italic mt-1" style="font-size: 0.75rem;">
+                                                            <i class="bi bi-paperclip"></i> @doc.NombreArchivo
+                                                        </small>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-center gap-2" style="flex: 1;">
+                                                @if (string.IsNullOrEmpty(doc.NombreArchivo))
+                                                {
+                                                    <label class="btn btn-outline-primary btn-sm py-0 shadow-sm @(doc.Exento || SoloLectura ? "disabled" : "")" style="font-size: 0.8rem;">
+                                                        <i class="bi bi-upload"></i> <span class="d-none d-xl-inline">Subir</span>
+                                                        <InputFile OnChange="@(e => Subir(e, doc))" style="display:none;" />
+                                                    </label>
+                                                }
+                                                else
+                                                {
+                                                    <div class="btn-group shadow-sm">
+                                                        <a href="@doc.UrlDescarga" target="_blank" class="btn btn-light btn-sm border text-primary" title="Ver Documento">
+                                                            <i class="bi bi-eye-fill"></i>
+                                                        </a>
+                                                        <button class="btn btn-light btn-sm border text-danger" @onclick="() => Eliminar(doc)"
+                                                                disabled="@(doc.Revisado || SoloLectura)" title="Eliminar">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+
+                                            <div class="d-flex justify-content-center gap-3 border-start ps-3" style="flex: 1;">
+
+                                                <div class="d-flex flex-column align-items-center">
+                                                    <div class="form-check form-switch m-0">
+                                                        <input class="form-check-input @(doc.Revisado ? "bg-success border-success" : "")"
+                                                               type="checkbox" role="switch"
+                                                               style="cursor: pointer;"
+                                                               checked="@doc.Revisado"
+                                                               @onchange="@(e => NotificarCambio(doc, "REVISADO", (bool)e.Value))"
+                                                               disabled="@(!EsAA || doc.Exento)"
+                                                               title="Validar documento">
+                                                    </div>
+                                                    <small style="font-size: 0.65rem;" class="fw-bold @(doc.Revisado ? "text-success" : "text-muted")">
+                                                        @(doc.Revisado ? "VALIDADO" : "Revisar")
+                                                    </small>
+                                                </div>
+
+                                                <div class="d-flex flex-column align-items-center">
+                                                    <div class="form-check form-switch m-0">
+                                                        <input class="form-check-input border-warning @(doc.Exento ? "bg-warning" : "")"
+                                                               type="checkbox" role="switch"
+                                                               style="cursor: pointer;"
+                                                               checked="@doc.Exento"
+                                                               @onchange="@(e => NotificarCambio(doc, "EXENTO", (bool)e.Value))"
+                                                               disabled="@SoloLectura"
+                                                               title="Marcar como No Aplica">
+                                                    </div>
+                                                    <small style="font-size: 0.65rem;" class="text-muted">
+                                                        @(doc.Exento ? "Exento" : "N/A")
+                                                    </small>
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="col-lg-3 h-100 d-flex flex-column border-start bg-secondary bg-opacity-10 shadow-sm">
+
+                            <div class="p-2 bg-white border-bottom text-center">
+                                <small class="fw-bold text-uppercase text-muted"><i class="bi bi-chat-text-fill me-1"></i> Notas del Caso</small>
+                            </div>
+
+                            <div class="flex-grow-1 p-2 overflow-auto d-flex flex-column gap-2" id="chatContainer">
+                                @if (Notas == null || !Notas.Any())
+                                {
+                                    <div class="text-center text-muted my-auto opacity-50 px-3">
+                                        <i class="bi bi-chat-dots fs-1"></i>
+                                        <p class="small mt-2" style="font-size: 0.75rem;">Escribe notas o comentarios para este expediente.</p>
+                                    </div>
+                                }
+                                else
+                                {
+                                    @foreach (var nota in Notas)
+                                    {
+                                        <div class="d-flex flex-column @(nota.EsMio ? "align-items-end" : "align-items-start")">
+                                            <div class="p-2 shadow-sm text-break border-0 @(nota.EsMio ? "bg-primary text-white" : "bg-white text-dark")"
+                                                 style="max-width: 95%; font-size: 0.8rem; border-radius: 12px; @(nota.EsMio ? "border-bottom-right-radius: 2px;" : "border-bottom-left-radius: 2px;")">
+                                                @nota.Mensaje
+                                            </div>
+                                            <small class="text-muted mt-1 pe-1" style="font-size: 0.6rem;">
+                                                @if (!nota.EsMio)
+                                                {
+                                                    <span class="fw-bold me-1">@nota.UsuarioNombre</span>
+                                                }
+                                                @nota.Fecha.ToString("HH:mm")
+                                            </small>
+                                        </div>
+                                    }
+                                }
+                            </div>
+
+                            <div class="p-2 bg-white border-top">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control border-0 bg-light"
+                                           placeholder="Escribir..."
+                                           @bind="nuevoMensaje"
+                                           @onkeyup="@(e => { if (e.Key == "Enter") Enviar(); })" />
+                                    <button class="btn btn-primary" @onclick="Enviar">
+                                        <i class="bi bi-send-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Mostrar { get; set; }
+    [Parameter] public EventCallback<bool> MostrarChanged { get; set; }
+    [Parameter] public List<DocumentoExpedienteDto> Documentos { get; set; } = new();
+    [Parameter] public List<NotaExpedienteDto> Notas { get; set; } = new();
+    [Parameter] public bool SoloLectura { get; set; } = false;
+    [Parameter] public bool EsAA { get; set; } = false;
+
+    [Parameter] public EventCallback<(DocumentoExpedienteDto Doc, InputFileChangeEventArgs Args)> OnSubirArchivo { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarArchivo { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> DocumentoModificado { get; set; }
+    //[Parameter] public EventCallback DocumentoModificado { get; set; }
+    [Parameter] public EventCallback<string> OnEnviarMensaje { get; set; }
+    [Parameter] public string Pedimento { get; set; } = "";
+    [Parameter] public string Referencia { get; set; } = "";
+    [Parameter] public string Cliente { get; set; } = "";
+
+    private string nuevoMensaje = "";
+
+    private int Progreso
+    {
+        get
+        {
+            if (Documentos == null || !Documentos.Any()) return 0;
+            var requeridos = Documentos.Where(d => d.EsObligatorioCatalogo && !d.Exento).Count();
+            if (requeridos == 0) return 100;
+            var cargados = Documentos.Where(d => d.EsObligatorioCatalogo && !d.Exento && !string.IsNullOrEmpty(d.NombreArchivo)).Count();
+            return (int)((double)cargados / requeridos * 100);
+        }
+    }
+
+    private async Task Cerrar()
+    {
+        Mostrar = false;
+        await MostrarChanged.InvokeAsync(Mostrar);
+    }
+
+    private async Task Subir(InputFileChangeEventArgs e, DocumentoExpedienteDto doc) => await OnSubirArchivo.InvokeAsync((doc, e));
+    private async Task Eliminar(DocumentoExpedienteDto doc) => await OnEliminarArchivo.InvokeAsync(doc);
+
+    private async Task NotificarCambio(DocumentoExpedienteDto doc, string tipo, bool valor)
+    {
+        if (tipo == "REVISADO") doc.Revisado = valor;
+        if (tipo == "EXENTO") doc.Exento = valor;
+        await DocumentoModificado.InvokeAsync(doc);
+    }
+
+    private async Task Enviar()
+    {
+        if (!string.IsNullOrWhiteSpace(nuevoMensaje))
+        {
+            await OnEnviarMensaje.InvokeAsync(nuevoMensaje);
+            nuevoMensaje = "";
+        }
+    }
+}

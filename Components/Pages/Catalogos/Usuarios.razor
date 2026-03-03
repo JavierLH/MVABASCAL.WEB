@@ -370,8 +370,13 @@
             }
             else
             {
-                var msg = await resp.Content.ReadAsStringAsync(); //TODO: implementar un log para guardar todos los errores. 
-                await MostrarToast("El usuario ya existe (o está desactivado). Intenta con otro nombre.", SweetAlertIcon.Error);
+                var msg = await resp.Content.ReadAsStringAsync();
+
+                string mensajeError = string.IsNullOrEmpty(msg)
+                    ? "Ocurrió un error al guardar."
+                    : msg;
+
+                await MostrarToast(mensajeError, SweetAlertIcon.Error);
             }
         }
         catch (Exception ex)

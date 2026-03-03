@@ -1,0 +1,63 @@
+﻿@using SistemaAduanero.Shared.DTOs
+
+<div class="card shadow-sm border-0 mt-4 h-100" style="min-height: 400px; display: flex; flex-direction: column;">
+    <div class="card-header bg-white py-2 border-bottom">
+        <h6 class="mb-0 fw-bold text-secondary text-uppercase">
+            <i class="bi bi-chat-dots-fill"></i> Notas del Expediente
+        </h6>
+    </div>
+
+    <div class="card-body bg-light p-3" style="overflow-y: auto; flex: 1;">
+        @if (Notas.Count == 0)
+        {
+            <div class="text-center text-muted mt-5">
+                <i class="bi bi-pencil-square fs-1 opacity-25"></i>
+                <p class="small mt-2">No hay notas registradas.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var nota in Notas)
+            {
+                <div class="d-flex mb-2 @(nota.EsMio ? "justify-content-end" : "justify-content-start")">
+                    <div class="card border-0 shadow-sm p-2"
+                         style="max-width: 85%; font-size: 0.8rem; border-radius: 10px;
+                                        @(nota.EsMio ? "background-color: #e3f2fd; color: #000;" : "background-color: #fff;")">
+                        <div class="fw-bold" style="font-size: 0.7rem; color: #666;">
+                            @nota.UsuarioNombre <span class="fw-normal text-muted ms-1">- @nota.Fecha.ToString("HH:mm")</span>
+                        </div>
+                        <div class="mt-1">@nota.Mensaje</div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="card-footer bg-white p-2 border-top">
+        <div class="input-group">
+            <input type="text" class="form-control form-control-sm"
+                   placeholder="Escribir nota..."
+                   @bind="nuevoMensaje"
+                   @onkeyup="@(e => { if (e.Key == "Enter") Enviar(); })" />
+            <button class="btn btn-primary btn-sm" @onclick="Enviar">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<NotaExpedienteDto> Notas { get; set; } = new();
+    [Parameter] public EventCallback<string> OnEnviarMensaje { get; set; }
+
+    private string nuevoMensaje = "";
+
+    private async Task Enviar()
+    {
+        if (!string.IsNullOrWhiteSpace(nuevoMensaje))
+        {
+            await OnEnviarMensaje.InvokeAsync(nuevoMensaje);
+            nuevoMensaje = ""; // Limpiar input
+        }
+    }
+}

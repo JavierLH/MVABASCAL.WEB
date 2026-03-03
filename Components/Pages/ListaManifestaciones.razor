@@ -78,6 +78,7 @@
                                  <th class="ps-4">Pedimento</th>
                                 <th>Cliente</th>
                                 <th class="text-end">Valor Aduana</th>
+                                <th class="text-center" style="width: 150px;">Progreso (Docs)</th>
                                 <th class="text-center">Estado</th>
                                 <th class="text-center">Fecha Registro</th>
                                 <th class="text-end pe-4">Acciones</th>
@@ -104,6 +105,20 @@
 
                                     <td class="text-end fw-bold">
                                         @((item.TotalValorAduana ?? 0).ToString("C2"))
+                                    </td>
+                                    @* === NUEVA CELDA: BARRA DE PROGRESO === *@
+                                    <td class="align-middle">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <div class="progress flex-grow-1 shadow-sm bg-secondary bg-opacity-10" style="height: 6px; max-width: 100px;">
+                                                <div class="progress-bar @ObtenerColorBarra(item.Progreso)"
+                                                     role="progressbar"
+                                                     style="width: @(item.Progreso)%; transition: width 0.5s ease;">
+                                                </div>
+                                            </div>
+                                            <span class="small fw-bold text-muted" style="font-size: 0.7rem; width: 35px;">
+                                                @item.Progreso%
+                                            </span>
+                                        </div>
                                     </td>
                                     <td class="text-center">
                                         @if (item.EstadoEnvio == "COMPLETO")
@@ -264,6 +279,13 @@
                 await MostrarToast("No se pudo eliminar.", SweetAlertIcon.Error);
             }
         }
+    }
+
+    private string ObtenerColorBarra(int p)
+    {
+        if (p == 100) return "bg-success"; 
+        if (p >= 50) return "bg-warning";  
+        return "bg-danger";                // Rojo (Incompleto 0-49%)
     }
 
     private async Task MostrarToast(string mensaje, SweetAlertIcon icono)

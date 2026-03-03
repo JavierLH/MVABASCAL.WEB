@@ -1,7 +1,6 @@
 ﻿@page "/catalogo"
 @inject HttpClient Http
 @inject SweetAlertService Swal
-
 <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0">
         @* HEADER AZUL ESTANDAR *@
@@ -162,6 +161,7 @@
         await CargarDatosApi();
     }
 
+   
     private async Task CargarDatosApi()
     {
         try
@@ -236,6 +236,8 @@
         if (response.IsSuccessStatusCode)
         {
             await CargarDatosApi();
+            //log.Guardar("Metodo: Guardar 1 usuario: andy 1 guardo documento: {item.NombreDocumento" )
+
             await MostrarToast("Documento guardado.", SweetAlertIcon.Success);
             CerrarModal();
         }
@@ -265,6 +267,8 @@
             if (response.IsSuccessStatusCode)
             {
                 await CargarDatosApi();
+                //log.Guardar("Metodo: Eliminar 1 Modulo:Documentos 1 usuario: andy 1 Mensaje: desactivo documento: {item.NombreDocumento" )
+
                 await MostrarToast("Documento Inactivado", SweetAlertIcon.Success);
             }
         }
@@ -278,6 +282,8 @@
         if (response.IsSuccessStatusCode)
         {
             await CargarDatosApi();
+            //log.Guardar("Metodo:Reactivar 1  usuario: andy 1 reactivo documento: {item.NombreDocumento" )
+
             await MostrarToast("Documento Reactivado", SweetAlertIcon.Success);
         }
     }

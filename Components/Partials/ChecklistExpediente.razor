@@ -1,0 +1,142 @@
+﻿@using SistemaAduanero.Shared.DTOs
+
+<div class="card shadow-sm border-0 mt-4">
+    <div class="card-header bg-white py-2 border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-secondary text-uppercase">
+            <i class="bi bi-folder2-open"></i> Expediente Digital
+        </h6>
+        <div class="d-flex align-items-center gap-2" style="width: 200px;">
+            <small class="text-muted fw-bold">@Progreso%</small>
+            <div class="progress flex-grow-1" style="height: 6px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: @(Progreso)%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
+                    <tr>
+                        <th class="ps-3">Documento</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Revisión (AA)</th>
+                        <th class="text-end pe-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Documentos)
+                    {
+                        <tr class="@(doc.Exento ? "opacity-50 bg-light" : "")">
+                            <td class="ps-3">
+                                <div class="fw-bold text-dark">@doc.NombreDocumento</div>
+                                @if (doc.Exento)
+                                {
+                                    <span class="badge bg-secondary" style="font-size: 0.65rem;">EXENTO</span>
+                                }
+                                else if (doc.EsObligatorioCatalogo)
+                                {
+
+                                    <span class="text-danger" style="font-size: 0.7rem;">* Requerido</span>
+                                }
+
+                                @if (!string.IsNullOrEmpty(doc.NombreArchivo))
+                                {
+                                    <div class="text-muted fst-italic" style="font-size: 0.7rem;">
+                                        <i class="bi bi-paperclip"></i> @doc.NombreArchivo
+                                    </div>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                @if (doc.Exento)
+                                {
+                                    <i class="bi bi-dash-circle text-muted fs-5" title="No aplica"></i>
+                                }
+                                else if (!string.IsNullOrEmpty(doc.NombreArchivo))
+                                {
+
+                                    <i class="bi bi-check-circle-fill text-success fs-5" title="Cargado"></i>
+                                }
+                                else
+                                {
+
+                                    <i class="bi bi-circle text-muted fs-5" title="Pendiente"></i>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-3">
+                                    <div class="form-check form-switch" title="Validar Documento">
+                                        <input class="form-check-input" type="checkbox" checked="@doc.Revisado"
+                                               @onchange="@(e => NotificarCambio(doc, "REVISADO", (bool)e.Value))" disabled="@SoloLectura">
+                                    </div>
+                                    <div class="form-check" title="Exentar Documento">
+                                        <input class="form-check-input border-warning" type="checkbox" checked="@doc.Exento"
+                                               @onchange="@(e => NotificarCambio(doc, "EXENTO", (bool)e.Value))" disabled="@SoloLectura">
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="text-end pe-3">
+                                @if (string.IsNullOrEmpty(doc.NombreArchivo))
+                                {
+                                    <label class="btn btn-outline-primary btn-sm py-0 px-2 shadow-sm @(SoloLectura ? "disabled" : "")">
+                                        <i class="bi bi-upload"></i> Cargar
+                                        <InputFile OnChange="@(e => Subir(e, doc))" style="display:none;" />
+                                    </label>
+                                }
+                                else
+                                {
+                                    <div class="btn-group shadow-sm">
+                                        <a href="@doc.UrlDescarga" target="_blank" class="btn btn-light btn-sm border text-primary"><i class="bi bi-eye-fill"></i></a>
+                                        <button class="btn btn-light btn-sm border text-danger" @onclick="() => Eliminar(doc)" disabled="@SoloLectura"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<DocumentoExpedienteDto> Documentos { get; set; } = new();
+    [Parameter] public bool SoloLectura { get; set; } = false;
+
+    // Eventos para comunicarnos con el Padre (NuevaManifestacion.razor)
+    [Parameter] public EventCallback<(DocumentoExpedienteDto Doc, InputFileChangeEventArgs Args)> OnSubirArchivo { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarArchivo { get; set; }
+    [Parameter] public EventCallback DocumentoModificado { get; set; } // Para avisar que se tocó un check
+
+    private int Progreso
+    {
+        get
+        {
+            if (Documentos == null || !Documentos.Any()) return 0;
+            var requeridos = Documentos.Where(d => d.EsObligatorioCatalogo && !d.Exento).Count();
+            if (requeridos == 0) return 100;
+            var cargados = Documentos.Where(d => d.EsObligatorioCatalogo && !d.Exento && !string.IsNullOrEmpty(d.NombreArchivo)).Count();
+            return (int)((double)cargados / requeridos * 100);
+        }
+    }
+
+    private async Task Subir(InputFileChangeEventArgs e, DocumentoExpedienteDto doc)
+    {
+        await OnSubirArchivo.InvokeAsync((doc, e));
+    }
+
+    private async Task Eliminar(DocumentoExpedienteDto doc)
+    {
+        await OnEliminarArchivo.InvokeAsync(doc);
+    }
+
+    private async Task NotificarCambio(DocumentoExpedienteDto doc, string tipo, bool valor)
+    {
+        if (tipo == "REVISADO") doc.Revisado = valor;
+        if (tipo == "EXENTO") doc.Exento = valor;
+        await DocumentoModificado.InvokeAsync();
+    }
+}
