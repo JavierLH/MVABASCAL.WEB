@@ -8,6 +8,8 @@
 @inject NavigationManager NavManager
 @inject SweetAlertService Swal
 @attribute [Authorize]
+@inject IJSRuntime JS
+
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -15,12 +17,12 @@
             <h3 class="mb-0 fw-bold text-primary">Expedientes de Valor</h3>
             <p class="text-muted small">Listado de manifestaciones registradas</p>
         </div>
-        @if (!bloquearCamposAA) 
-          {
+        @if (!bloquearCamposAA)
+        {
             <button class="btn btn-primary" @onclick="IrANueva">
                 <i class="bi bi-plus-lg"></i> Nuevo Expediente
             </button>
-          }
+        }
     </div>
 
     <div class="card shadow-sm border-0 mb-4 bg-light">
@@ -75,7 +77,7 @@
                         <thead class="table-light small text-uppercase">
                             <tr>
                                 <th>Referencia</th>
-                                 <th class="ps-4">Pedimento</th>
+                                <th class="ps-4">Pedimento</th>
                                 <th>Cliente</th>
                                 <th class="text-end">Valor Aduana</th>
                                 <th class="text-center" style="width: 150px;">Progreso (Docs)</th>
@@ -89,11 +91,11 @@
                             @foreach (var item in respuesta.Elementos)
                             {
                                 <tr>
-                                    
+
                                     <td class="ps-4 fw-bold text-primary">
                                         @if (!string.IsNullOrEmpty(item.Referencia))
                                         {
-                                             @item.Referencia
+                                            @item.Referencia
                                         }
                                         else
                                         {
@@ -130,11 +132,19 @@
                                             <span class="badge bg-secondary">Borrador</span>
                                         }
                                     </td>
+
+
+
                                     <td class="text-center small text-muted">
                                         @item.FechaRegistro?.ToShortDateString()
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="btn-group">
+
+                                            <button class="btn btn-sm btn-outline-info" @onclick="() => AbrirModalDetalle(item)" title="Ver Detalle">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+
                                             <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(item.ManifestacionId)" title="Editar">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
@@ -178,6 +188,317 @@
     }
 </div>
 
+@* --- MODAL DE DETALLE / RESUMEN (SOLO LECTURA - RF-07) --- *@
+@if (mostrarModalDetalle && manifestacionSeleccionada != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-file-text me-2"></i> Resumen de Manifestación de Valor
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalDetalle" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body bg-light">
+                    @* --- SECCIÓN 1: DATOS DE LA MANIFESTACIÓN DE VALOR --- *@
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-white py-2">
+                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-info-circle-fill"></i> DATOS DE LA MANIFESTACIÓN DE VALOR</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">RFC DEL IMPORTADOR</label>
+                                    <div class="form-control form-control-sm bg-white border-0 fw-bold">@(manifestacionSeleccionada.RfcImportador ?? "N/A")</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-muted">NOMBRE O RAZÓN SOCIAL</label>
+                                    <div class="form-control form-control-sm bg-white border-0 fw-bold text-primary">@(manifestacionSeleccionada.RazonSocial ?? "N/A")</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold text-muted">REFERENCIA</label>
+                                    <div class="form-control form-control-sm bg-white border-0 fw-bold">@(manifestacionSeleccionada.Referencia ?? "N/A")</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">NO. PEDIMENTO</label>
+                                    <div class="form-control form-control-sm bg-white border-0 fw-bold text-primary">@manifestacionSeleccionada.NumeroPedimento</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    @* --- SECCIÓN 2: TOTALES --- *@
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-white py-2">
+                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-calculator-fill"></i> VALOR EN ADUANA (TOTALES)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">PRECIO PAGADO</label>
+                                    <div class="form-control form-control-sm bg-white border-0 text-end">@((manifestacionSeleccionada.TotalPrecioPagado ?? 0).ToString("C2"))</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">PRECIO POR PAGAR</label>
+                                    <div class="form-control form-control-sm bg-white border-0 text-end">@((manifestacionSeleccionada.TotalPrecioPorPagar ?? 0).ToString("C2"))</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">INCREMENTABLES</label>
+                                    <div class="form-control form-control-sm bg-white border-0 text-end">@((manifestacionSeleccionada.TotalIncrementables ?? 0).ToString("C2"))</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-muted">DECREMENTABLES</label>
+                                    <div class="form-control form-control-sm bg-white border-0 text-end">@((manifestacionSeleccionada.TotalDecrementables ?? 0).ToString("C2"))</div>
+                                </div>
+
+                                <div class="col-md-12 mt-3">
+                                    <div class="p-2 rounded bg-success bg-opacity-10 border border-success d-flex justify-content-between align-items-center">
+                                        <span class="ps-2 fw-bold text-success">TOTAL VALOR ADUANA</span>
+                                        <span class="pe-2 fw-bold text-success fs-5">@((manifestacionSeleccionada.TotalValorAduana ?? 0).ToString("C2"))</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* --- SECCIÓN 3: PERSONAS CONSULTA --- *@
+                    @if (manifestacionSeleccionada.Consultas != null && manifestacionSeleccionada.Consultas.Any())
+                    {
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white py-2">
+                                <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-people-fill"></i> RFC's DE CONSULTA</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-3">RFC</th>
+                                            <th>TIPO DE FIGURA</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var rfc in manifestacionSeleccionada.Consultas)
+                                        {
+                                            <tr>
+                                                <td class="ps-3 fw-bold">@rfc.RfcConsulta</td>
+                                                <td><span class="badge bg-light text-secondary border">@rfc.TipoFigura</span></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+
+                    @* --- SECCIÓN 4: DOCUMENTOS COVE --- *@
+                    <div class="card shadow-sm border-0 mb-4">
+                        <div class="card-header bg-white py-2">
+                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-file-earmark-text-fill"></i> DOCUMENTOS COVE</h6>
+                        </div>
+                        <div class="card-body p-3">
+                            @if (manifestacionSeleccionada.ManifestacionCoves == null || !manifestacionSeleccionada.ManifestacionCoves.Any())
+                            {
+                                <div class="alert alert-light text-center mb-0 p-3 text-muted">
+                                    No hay documentos COVE registrados para esta manifestación.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="accordion" id="accordionCoves">
+                                    @{
+                                        int coveIndex = 0;
+                                    }
+                                    @foreach (var cove in manifestacionSeleccionada.ManifestacionCoves)
+                                    {
+                                        var currentIndex = coveIndex; // Guardamos índice local para el clic
+                                        var isExpanded = activeCoveIndex == currentIndex;
+                                        <div class="accordion-item border mb-2 rounded overflow-hidden">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button bg-light text-dark fw-bold py-2 @(isExpanded ? "" : "collapsed")" type="button" @onclick="() => ToggleCove(currentIndex)">
+                                                    COVE: <span class="text-primary ms-2">@cove.NumeroCove</span>
+                                                    <span class="ms-auto me-3 small text-muted fw-normal">Incoterm: @(cove.Incoterm ?? "N/A") | Aduana: @(cove.Aduana ?? "N/A")</span>
+                                                </button>
+                                            </h2>
+                                            <div class="accordion-collapse collapse @(isExpanded ? "show" : "")">
+                                                <div class="accordion-body bg-white p-3">
+
+                                                    @* COVE: Información Acuse de Valor y Pedimentos *@
+                                                    <h6 class="text-secondary fw-bold border-bottom pb-1"><i class="bi bi-info-square me-1"></i> Información Acuse de Valor</h6>
+                                                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                                                        <div class="col-md-3">
+                                                            <label class="form-label small fw-bold text-muted mb-0">NÚMERO COVE</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.NumeroCove ?? "N/A")</div>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label small fw-bold text-muted mb-0">MÉTODO VALORACIÓN ADUANERA</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.MetodoValoracion ?? "N/A")</div>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label small fw-bold text-muted mb-0">INCOTERM</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.Incoterm ?? "N/A")</div>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label small fw-bold text-muted mb-0">¿EXISTE VINCULACIÓN?</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.ExisteVinculacion == true ? "SÍ" : "NO")</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <h6 class="text-secondary fw-bold border-bottom pb-1"><i class="bi bi-file-earmark-check me-1"></i> Pedimentos</h6>
+                                                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                                                        <div class="col-md-4">
+                                                            <label class="form-label small fw-bold text-muted mb-0">PEDIMENTO</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.NumeroPedimento ?? "N/A")</div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <label class="form-label small fw-bold text-muted mb-0">PATENTE</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.Patente ?? "N/A")</div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <label class="form-label small fw-bold text-muted mb-0">ADUANA</label>
+                                                            <div class="fw-bold text-dark fs-6">@(cove.Aduana ?? "N/A")</div>
+                                                        </div>
+                                                    </div>
+
+
+
+                                                    @* COVE: Listas Apiladas (Sustituyendo las Tabs) *@
+                                                    @* Sección Pagados *@
+                                                    @if (cove.PreciosPagados != null && cove.PreciosPagados.Any())
+                                                    {
+                                                        <div class="mt-4 mb-3">
+                                                            <h6 class="text-primary fw-bold border-bottom pb-1"><i class="bi bi-cash-coin me-1"></i> Precio pagado <span class="badge bg-secondary ms-1">@(cove.PreciosPagados.Count)</span></h6>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm small table-bordered mb-0">
+                                                                    <thead class="table-light"><tr><th>Fecha de pago</th><th>Forma de pago</th><th>Tipo de moneda</th><th>Tipo de cambio</th><th class="text-end">Importe</th></tr></thead>
+                                                                    <tbody>
+                                                                        @foreach (var p in cove.PreciosPagados)
+                                                                        {
+                                                                            <tr><td>@p.FechaPago?.ToShortDateString()</td><td>@p.TipoPago @(!string.IsNullOrEmpty(p.DescripcionOtroPago) ? $"({p.DescripcionOtroPago})" : "")</td><td>@p.TipoMoneda</td><td>@p.TipoCambio</td><td class="text-end">@p.Total.ToString("N2")</td></tr>
+                                                                        }
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    @* Sección Por Pagar *@
+                                                    @if (cove.PreciosPorPagar != null && cove.PreciosPorPagar.Any())
+                                                    {
+                                                        <div class="mt-4 mb-3">
+                                                            <h6 class="text-danger fw-bold border-bottom pb-1"><i class="bi bi-clock-history me-1"></i> Precio por pagar <span class="badge bg-secondary ms-1">@(cove.PreciosPorPagar.Count)</span></h6>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm small table-bordered mb-0">
+                                                                    <thead class="table-light"><tr><th>Fecha de pago</th><th>Forma de pago</th><th>Tipo de moneda</th><th>Tipo de cambio</th><th class="text-end">Importe</th><th>Momento(s) o situación</th></tr></thead>
+                                                                    <tbody>
+                                                                        @foreach (var p in cove.PreciosPorPagar)
+                                                                        {
+                                                                            <tr><td>@p.FechaPago?.ToShortDateString()</td><td>@p.TipoPago</td><td>@p.TipoMoneda</td><td>@p.TipoCambio</td><td class="text-end">@p.Total.ToString("N2")</td><td>@p.SituacionNoFechaPago</td></tr>
+                                                                        }
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    @* Sección Compensaciones *@
+                                                    @if (cove.Compensaciones != null && cove.Compensaciones.Any())
+                                                    {
+                                                        <div class="mt-4 mb-3">
+                                                            <h6 class="text-warning text-darken-3 fw-bold border-bottom pb-1"><i class="bi bi-arrow-left-right me-1"></i> Compenso pago <span class="badge bg-secondary ms-1">@(cove.Compensaciones.Count)</span></h6>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm small table-bordered mb-0">
+                                                                    <thead class="table-light"><tr><th>Fecha de pago</th><th>Motivo por lo que se realizó</th><th>Prestación de la mercancía</th><th>Forma de pago</th></tr></thead>
+                                                                    <tbody>
+                                                                        @foreach (var c in cove.Compensaciones)
+                                                                        {
+                                                                            <tr><td>@c.Fecha?.ToShortDateString()</td><td>@c.Motivo</td><td>@c.PrestacionMercancia</td><td>@c.TipoPago</td></tr>
+                                                                        }
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    @* Sección Conceptos Valor (+/-) *@
+                                                    @if (cove.ConceptosValor != null && cove.ConceptosValor.Any())
+                                                    {
+                                                        <div class="mt-4 mb-0">
+                                                            <h6 class="text-info text-darken-2 fw-bold border-bottom pb-1"><i class="bi bi-calculator me-1"></i> Incrementables / Decrementables <span class="badge bg-secondary ms-1">@(cove.ConceptosValor.Count)</span></h6>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm small table-bordered mb-0">
+                                                                    <thead class="table-light"><tr><th class="text-center">+/-</th><th>Tipo</th><th>Fecha erogación</th><th class="text-end">Importe</th><th>Tipo de moneda</th><th>Tipo de cambio</th><th>¿Cargo importador?</th></tr></thead>
+                                                                    <tbody>
+                                                                        @foreach (var c in cove.ConceptosValor)
+                                                                        {
+                                                                            var isInc = c.TipoConcepto == "INCREMENTABLE";
+                                                                            <tr>
+                                                                                <td class="text-center @(isInc ? "text-success" : "text-danger") fw-bold fs-6">@(isInc ? "+" : "-")</td>
+                                                                                <td>@c.ClaveConcepto</td>
+                                                                                <td>@c.FechaErogacion?.ToShortDateString()</td>
+                                                                                <td class="text-end fw-bold">@c.Importe.ToString("N2")</td>
+                                                                                <td>@c.TipoMoneda</td>
+                                                                                <td>@c.TipoCambio</td>
+                                                                                <td>
+                                                                                    @if (c.ACargoImportador == true)
+                                                                                    {
+                                                                                        <span class="badge bg-success">SÍ</span>
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                        <span class="badge bg-secondary">NO</span>
+                                                                                    }
+                                                                                </td>
+                                                                            </tr>
+                                                                        }
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+
+                                                    @if ((cove.PreciosPagados == null || !cove.PreciosPagados.Any()) &&
+                                                                                            (cove.PreciosPorPagar == null || !cove.PreciosPorPagar.Any()) &&
+                                                                                            (cove.Compensaciones == null || !cove.Compensaciones.Any()) &&
+                                                                                            (cove.ConceptosValor == null || !cove.ConceptosValor.Any()))
+                                                    {
+                                                        <div class="alert alert-light text-center small text-muted mt-3 mb-0 py-2 border">
+                                                            No hay conceptos registrados (Pagados, Por Pagar, etc.) para este COVE.
+                                                        </div>
+                                                    }
+
+                                                </div>
+                                            </div>
+
+
+                                        </div>
+                                        coveIndex++;
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @* --- FOOTER: ACCIONES (RF-07) --- *@
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-outline-secondary fw-bold" @onclick="CerrarModalDetalle">
+                        <i class="bi bi-x-circle me-1"></i> Cerrar
+                    </button>
+                    @* Este botón cumple con el requerimiento de "Se puede descargar la información en formato pdf" *@
+                    <button type="button" class="btn btn-danger fw-bold shadow-sm" @onclick="DescargarPDF">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Descargar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
 @code {
     //seguridad de campos
     [CascadingParameter]
@@ -190,6 +511,14 @@
     // 2. Objeto para recibir la respuesta PAGINADA (Lista + Metadatos)
     // NOTA: Ya no usamos List<ManifestacionDto> directamente
     private PaginacionResponseDto<ManifestacionDto>? respuesta;
+
+    // Variables para controlar el Modal
+    private bool mostrarModalDetalle = false;
+    private ManifestacionDto? manifestacionSeleccionada;
+    private int activeCoveIndex = 0; // <-- NUEVA VARIABLE: Para saber cuál está abierto
+
+
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -277,6 +606,69 @@
             else
             {
                 await MostrarToast("No se pudo eliminar.", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    // Método para abrir el modal desde el "ojito"
+    private async Task AbrirModalDetalle(ManifestacionDto item)
+    {
+        try
+        {
+            var res = await Http.GetFromJsonAsync<ManifestacionDto>($"api/ManifestacionesValor/{item.ManifestacionId}");
+            if (res != null)
+            {
+                manifestacionSeleccionada = res;
+                activeCoveIndex = 0; // <-- AÑADE ESTA LÍNEA AQUÍ
+                mostrarModalDetalle = true;
+            }
+            else
+            {
+                await MostrarToast("No se encontró el detalle de la manifestación.", SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast("Error al cargar detalle: " + ex.Message, SweetAlertIcon.Error);
+        }
+    }
+
+    // <-- NUEVO MÉTODO PARA ABRIR/CERRAR
+    private void ToggleCove(int index)
+    {
+        if (activeCoveIndex == index)
+            activeCoveIndex = -1; // Cierra si ya estaba abierto
+        else
+            activeCoveIndex = index; // Abre el nuevo listado (y cierra los demás)
+    }
+
+    // Método para cerrar el modal
+    private void CerrarModalDetalle()
+    {
+        mostrarModalDetalle = false;
+        manifestacionSeleccionada = null;
+    }
+
+    // Método para descargar el PDF (Pendiente de tu lógica de backend)
+    private async Task DescargarPDF()
+    {
+        if (manifestacionSeleccionada != null)
+        {
+            var url = $"api/ManifestacionesValor/{manifestacionSeleccionada.ManifestacionId}/pdf";
+            var response = await Http.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(bytes);
+                var fileName = $"ManifestacionValor_{manifestacionSeleccionada.NumeroPedimento}.pdf";
+
+                // Usa JS Interop para disparar la descarga en el navegador
+                await JS.InvokeVoidAsync("downloadFileFromBase64", base64, fileName, "application/pdf");
+            }
+            else
+            {
+                await MostrarToast("Error al generar el PDF.", SweetAlertIcon.Error);
             }
         }
     }

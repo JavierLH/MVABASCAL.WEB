@@ -133,8 +133,8 @@
 
     <div class="row g-4">
         @* === SECCIÓN IZQUIERDA: RFCs CONSULTA === *@
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 h-100">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100 w-20">
                 <div class="card-header bg-white py-2 border-bottom">
                     <h6 class="mb-0 fw-bold text-secondary text-uppercase"><i class="bi bi-people-fill"></i> Personas Consulta</h6>
                 </div>
@@ -197,12 +197,77 @@
                 </div>
             </div>
         </div>
+
+
+        @* === SECCIÓN MEDIO/DERECHA: EDOCUMENTS === *@
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0" style="max-height: 400px; display: flex; flex-direction: column;">
+                <div class="card-header bg-white py-2 border-bottom">
+                    <h6 class="mb-0 fw-bold text-secondary text-uppercase">
+                        <i class="bi bi-file-earmark-text-fill"></i> eDocuments
+                    </h6>
+                </div>
+                <div class="card-body bg-light" style="display: flex; flex-direction: column; overflow: hidden; padding: 1rem;">
+
+                    @* Formulario Agregar eDocument *@
+                    @if (!bloquearCamposAA)
+                    {
+                        <div class="card p-3 mb-3 border-0 shadow-sm" style="flex-shrink: 0;">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">NÚMERO DE EDOCUMENT</label>
+                                    <input type="text" class="form-control form-control-sm" placeholder="Capturar eDocument..."
+                                           @bind="tempEdocument" disabled="@bloquearCamposAA" />
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold" @onclick="AgregarEdocument">
+                                        <i class="bi bi-plus-lg"></i> AGREGAR
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* Lista eDocuments con Contenedor de Scroll *@
+                    <div class="border rounded bg-white" style="flex-grow: 1; overflow-y: auto;">
+                        <ul class="list-group list-group-flush mb-0">
+                            @foreach (var edoc in manifestacion.Edocuments)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                                    <div>
+                                        <span class="fw-bold d-block small text-dark">@edoc.NumeroEdocument</span>
+                                    </div>
+                                    @if (!bloquearCamposAA)
+                                    {
+                                        <button type="button" class="btn btn-link btn-sm text-danger p-0" @onclick="() => EliminarEdocument(edoc)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </li>
+                            }
+                            @if (manifestacion.Edocuments.Count == 0)
+                            {
+                                <li class="list-group-item text-center text-muted small py-3 bg-light border-0">
+                                    Sin eDocuments asociados.
+                                </li>
+                            }
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+
+
+
         
 
         
 
         @* === SECCIÓN DERECHA: LISTADO DE COVES === *@
-        <div class="col-md-8">
+        <div class="col-md-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white py-2 border-bottom d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold text-secondary text-uppercase"><i class="bi bi-file-earmark-text-fill"></i> Documentos COVE</h6>
@@ -1126,6 +1191,15 @@
                     RfcConsulta = c.RfcConsulta,
                     TipoFigura = c.TipoFigura
                 }).ToList();
+
+
+                manifestacion.Edocuments = res.Edocuments?.Select(e => new ManifestacionEdocumentDto
+                {
+                    AnexoId = e.AnexoId,
+                    NumeroEdocument = e.NumeroEdocument,
+                    Descripcion = e.Descripcion
+                }).ToList() ?? new List<ManifestacionEdocumentDto>();
+
                 manifestacion.Documentos = res.Documentos ?? new List<DocumentoExpedienteDto>();
                 manifestacion.HistorialNotas = res.HistorialNotas ?? new List<NotaExpedienteDto>();
                 // === MAPEO COVES (Tu código actual estaba bien aquí) ===
@@ -1956,4 +2030,31 @@
         }
     }
     public class CatalogoDto { public string Clave { get; set; } = ""; public string Descripcion { get; set; } = ""; }
+    
+    // ---> AGREGAR ESTE BLOQUE DE CÓDIGO
+    // Variables y métodos para eDocuments
+    private string tempEdocument = string.Empty;
+    private void AgregarEdocument()
+    {
+        if (!string.IsNullOrWhiteSpace(tempEdocument))
+        {
+            // Validamos que no esté duplicado
+            if (!manifestacion.Edocuments.Any(e => e.NumeroEdocument == tempEdocument.Trim()))
+            {
+                manifestacion.Edocuments.Add(new ManifestacionEdocumentDto
+                {
+                    NumeroEdocument = tempEdocument.Trim()
+                });
+            }
+            tempEdocument = string.Empty; // Limpiamos el input después de agregar
+        }
+    }
+
+    private void EliminarEdocument(ManifestacionEdocumentDto edoc)
+    {
+        manifestacion.Edocuments.Remove(edoc);
+    }
+    // <--- FIN DE AGREGADO
+
+
 }
