@@ -132,8 +132,8 @@
 
     <div class="row g-4">
         @* === SECCIÓN IZQUIERDA: RFCs CONSULTA === *@
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 h-100">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100 w-20">
                 <div class="card-header bg-white py-2 border-bottom">
                     <h6 class="mb-0 fw-bold text-secondary text-uppercase"><i class="bi bi-people-fill"></i> Personas Consulta</h6>
                 </div>
@@ -197,8 +197,71 @@
             </div>
         </div>
 
+
+        @* === SECCIÓN MEDIO/DERECHA: EDOCUMENTS === *@
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-2 border-bottom">
+                    <h6 class="mb-0 fw-bold text-secondary text-uppercase">
+                        <i class="bi bi-file-earmark-text-fill"></i> eDocuments
+                    </h6>
+                </div>
+                <div class="card-body bg-light">
+
+                    @* Formulario Agregar eDocument *@
+                    <div class="card p-3 mb-3 border-0 shadow-sm">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-muted">NÚMERO DE EDOCUMENT</label>
+                                <input type="text" class="form-control form-control-sm" placeholder="Capturar eDocument..." />
+                            </div>
+                            <div class="col-12 mt-3">
+                                <button type="button" class="btn btn-primary btn-sm w-100 fw-bold">
+                                    <i class="bi bi-plus-lg"></i> AGREGAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Lista eDocuments Mockeada *@
+                    <ul class="list-group list-group-flush border rounded bg-white">
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <span class="fw-bold d-block small text-dark">0987654321098</span>
+                            </div>
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <span class="fw-bold d-block small text-dark">1234567890123</span>
+                            </div>
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <span class="fw-bold d-block small text-dark">5678901234567</span>
+                            </div>
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </li>
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+
+
         @* === SECCIÓN DERECHA: LISTADO DE COVES === *@
-        <div class="col-md-8">
+        <div class="col-md-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white py-2 border-bottom d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold text-secondary text-uppercase"><i class="bi bi-file-earmark-text-fill"></i> Documentos COVE</h6>
