@@ -72,21 +72,23 @@
                                         }
                                     </td>
                                     <td class="text-center">
-                                        <button class="btn btn-light btn-sm text-primary p-1 me-2 shadow-sm" @onclick="() => Editar(item)" title="Editar">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-                                        @if (item.Estatus)
-                                        {
-                                            <button class="btn btn-light btn-sm text-danger p-1 shadow-sm" @onclick="() => Eliminar(item)" title="Eliminar (Desactivar)">
-                                                <i class="bi bi-trash"></i>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => Editar(item)" title="Editar">
+                                                <i class="bi bi-pencil-square"></i>
                                             </button>
-                                        }
-                                        else
-                                        {
-                                            <button class="btn btn-light btn-sm text-success p-1 shadow-sm" @onclick="() => Reactivar(item)" title="Reactivar">
-                                                <i class="bi bi-arrow-clockwise"></i>
-                                            </button>
-                                        }
+                                            @if (item.Estatus)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(item)" title="Eliminar (Desactivar)">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-success" @onclick="() => Reactivar(item)" title="Reactivar">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </button>
+                                            }
+                                        </div>
                                     </td>
                                 </tr>
                             }
