@@ -144,6 +144,23 @@
                                 <input class="form-control form-control-sm" @bind="usuario.Username" />
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">CORREO ELECTRÓNICO *</label>
+                                @if (ObtenerNombreRol(usuario.RolId) == "Usuario")
+                                {
+                                    <select class="form-select form-select-sm" @bind="usuario.Email">
+                                        <option value="">-- Seleccione Correo --</option>
+                                        @foreach (var c in CorreosDisponibles())
+                                        {
+                                            <option value="@c.Email">@c.Email</option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    <input type="email" class="form-control form-control-sm" @bind="usuario.Email" />
+                                }
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label small fw-bold text-muted">CONTRASEÑA</label>
                                 <input type="password" class="form-control form-control-sm" @bind="usuario.PasswordSinEncriptar"
                                        placeholder="@(usuario.UsuarioId > 0 ? "Dejar vacío para mantener actual" : "Requerida")" />
@@ -297,6 +314,7 @@
             NombreCompleto = item.NombreCompleto,
             Username = item.Username,
             RolId = item.RolId,
+            Email = item.Email,
             Activo = item.Activo,
             PasswordHash = item.PasswordHash, // Conservamos el hash viejo
             UsuarioClientes = new List<UsuarioCliente>() // Reiniciamos la lista local
@@ -308,16 +326,51 @@
         mostrarModal = true;
     }
 
+    private string ObtenerNombreRol(int rolId)
+    {
+        return ListaRoles.FirstOrDefault(r => r.RolId == rolId)?.NombreRol ?? "";
+    }
+
+    private List<SistemaAduanero.Shared.DTOs.ClienteEmail> CorreosDisponibles()
+    {
+        if (ClientesSeleccionadosIds.Count == 1)
+        {
+            var clienteId = ClientesSeleccionadosIds.First();
+            var cliente = ListaTodosClientes.FirstOrDefault(c => c.ClienteId == clienteId);
+            return cliente?.Emails ?? new List<SistemaAduanero.Shared.DTOs.ClienteEmail>();
+        }
+        return new List<SistemaAduanero.Shared.DTOs.ClienteEmail>();
+    }
+
     // 5. Lógica del Checklist
     private void ToggleCliente(int clienteId, object? checkedValue)
     {
         bool isChecked = (bool)(checkedValue ?? false);
-        if (isChecked) ClientesSeleccionadosIds.Add(clienteId);
-        else ClientesSeleccionadosIds.Remove(clienteId);
+        string nomRol = ObtenerNombreRol(usuario.RolId);
+
+        if (isChecked)
+        {
+            if (nomRol == "AA" || nomRol == "Usuario")
+            {
+                ClientesSeleccionadosIds.Clear();
+            }
+            ClientesSeleccionadosIds.Add(clienteId);
+        }
+        else
+        {
+            ClientesSeleccionadosIds.Remove(clienteId);
+        }
     }
 
-    private void SeleccionarTodos()
+    private async Task SeleccionarTodos()
     {
+        string nomRol = ObtenerNombreRol(usuario.RolId);
+        if (nomRol == "AA" || nomRol == "Usuario")
+        {
+            await MostrarToast($"El rol '{nomRol}' solo permite un cliente.", SweetAlertIcon.Warning);
+            return;
+        }
+
         if (ClientesSeleccionadosIds.Count == ListaTodosClientes.Count)
             ClientesSeleccionadosIds.Clear(); // Si ya están todos, limpiar
         else
@@ -331,9 +384,25 @@
         if (string.IsNullOrEmpty(usuario.NombreCompleto) || string.IsNullOrEmpty(usuario.Username) || usuario.RolId == 0)
         {
             await MostrarToast("Faltan datos: Verifica nombre, usuario y rol.", SweetAlertIcon.Warning);
-
             return;
         }
+
+        string nomRol = ObtenerNombreRol(usuario.RolId);
+        if (nomRol == "AA" || nomRol == "Usuario")
+        {
+            if (ClientesSeleccionadosIds.Count != 1)
+            {
+                await MostrarToast($"Para el rol '{nomRol}', debes seleccionar exactamente un cliente.", SweetAlertIcon.Warning);
+                return;
+            }
+        }
+
+        if (string.IsNullOrEmpty(usuario.Email))
+        {
+            await MostrarToast("El correo electrónico es obligatorio.", SweetAlertIcon.Warning);
+            return;
+        }
+
         if (usuario.UsuarioId == 0 && string.IsNullOrEmpty(usuario.PasswordSinEncriptar))
         {
             await MostrarToast("Contraseña Requerida: Para usuarios nuevos debes asignar una contraseña.", SweetAlertIcon.Warning);
