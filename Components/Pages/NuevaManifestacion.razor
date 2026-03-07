@@ -1841,49 +1841,43 @@
         }
 
         var archivo = data.Args.File;
-        // Validación básica de tamaño (ej. 10MB)
-        long maxFileSize = 1024 * 1024 * 10;
+        long maxFileSize = 1024 * 1024 * 10; // 10MB Mínimo subida de original
 
         try
         {
-            // 1. Preparar el contenido Multipart
+            await MostrarToast("Procesando documento VUCEM...", SweetAlertIcon.Info);
+
             using var content = new MultipartFormDataContent();
 
-            // Agregamos ID de Manifestación y ID del Catálogo
             content.Add(new StringContent(Id.Value.ToString()), "manifestacionId");
             content.Add(new StringContent(data.Doc.IdDocumento.ToString()), "catalogoId");
 
-            // Agregamos el archivo (leemos el stream)
-            // Importante: OpenReadStream necesita un límite de tamaño máximo
             var fileContent = new StreamContent(archivo.OpenReadStream(maxFileSize));
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(archivo.ContentType);
 
             content.Add(fileContent, "archivo", archivo.Name);
 
-            // 2. Enviar al Backend
             var response = await Http.PostAsync("api/Documentos/subir", content);
 
             if (response.IsSuccessStatusCode)
             {
-                // 3. Actualizar la vista con los datos que devolvió el servidor (AnexoId, Ruta, etc.)
                 var docActualizado = await response.Content.ReadFromJsonAsync<DocumentoExpedienteDto>();
 
                 if (docActualizado != null)
                 {
-                    // Actualizamos el objeto en memoria para que se vea reflejado al instante
                     data.Doc.AnexoId = docActualizado.AnexoId;
                     data.Doc.NombreArchivo = docActualizado.NombreArchivo;
-                    data.Doc.UrlDescarga = docActualizado.UrlDescarga; // El backend devuelve "uploads/..."
+                    data.Doc.UrlDescarga = docActualizado.UrlDescarga; 
                     data.Doc.FechaCarga = docActualizado.FechaCarga;
-                    data.Doc.Revisado = false; // Resetear validación al subir nuevo
+                    data.Doc.Revisado = false; 
 
-                    await MostrarToast("Archivo subido correctamente", SweetAlertIcon.Success);
+                    await MostrarToast("Archivo optimizado y subido correctamente", SweetAlertIcon.Success);
                 }
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                await MostrarToast("Error al subir: " + error, SweetAlertIcon.Error);
+                await MostrarToast("Error al procesar: " + error, SweetAlertIcon.Error);
             }
         }
         catch (Exception ex)
