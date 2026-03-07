@@ -10,37 +10,65 @@
 @attribute [Authorize]
 @inject IJSRuntime JS
 
-
 <div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="mb-0 fw-bold text-primary">Expedientes de Valor</h3>
-            <p class="text-muted small">Listado de manifestaciones registradas</p>
+
+    @* === 1. HEADER ESTILIZADO (RF-07 ESTILO VISUAL) === *@
+    @* === 1. HEADER HERO AZUL (ESTILO UNIFICADO) === *@
+    <div class="card bg-primary text-white shadow-sm border-0 mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center py-3">
+
+            @* Lado Izquierdo: Icono y Títulos *@
+            <div class="d-flex align-items-center gap-3">
+                @* El círculo se queda blanco, el icono azul: Crea un contraste perfecto *@
+                <div class="bg-white p-3 rounded-circle shadow-sm text-primary d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="bi bi-folder2-open fs-3"></i>
+                </div>
+
+                <div>
+                    <h6 class="fw-bold text-uppercase mb-1 text-white">Expedientes de Valor</h6>
+                    <div class="d-flex gap-3 small text-white-50">
+                        <span><i class="bi bi-list-ul me-1"></i> Listado General</span>
+                        @if (respuesta != null)
+                        {
+                            <span><i class="bi bi-database me-1"></i> @respuesta.TotalRegistros Registros</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @* Lado Derecho: Botón *@
+            @if (!bloquearCamposAA)
+            {
+                @* CAMBIO IMPORTANTE: btn-light (Blanco) con texto azul para resaltar en el fondo oscuro *@
+                <button class="btn btn-light fw-bold text-primary shadow-sm px-4" @onclick="IrANueva">
+                    <i class="bi bi-plus-lg me-2"></i> Nuevo Expediente
+                </button>
+            }
         </div>
-        @if (!bloquearCamposAA)
-        {
-            <button class="btn btn-primary" @onclick="IrANueva">
-                <i class="bi bi-plus-lg"></i> Nuevo Expediente
-            </button>
-        }
     </div>
 
-    <div class="card shadow-sm border-0 mb-4 bg-light">
+
+    @* === 2. FILTROS DE BÚSQUEDA === *@
+    <div class="card shadow-sm border-0 mb-4 bg-white">
         <div class="card-body py-3">
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted">Fecha Inicio</label>
+                    <label class="form-label small fw-bold text-muted text-uppercase">Fecha Inicio</label>
                     <input type="date" class="form-control form-control-sm" @bind="filtros.FechaInicio" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted">Fecha Fin</label>
+                    <label class="form-label small fw-bold text-muted text-uppercase">Fecha Fin</label>
                     <input type="date" class="form-control form-control-sm" @bind="filtros.FechaFin" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Buscar por pedimento /cliente / referencia</label>
+                    <label class="form-label small fw-bold text-muted text-uppercase">Búsqueda Rápida</label>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" placeholder="Ej: 5000001 .. o Nombre Cliente" @bind="filtros.BusquedaTexto" @bind:event="oninput" @onkeyup="@(e => { if (e.Key == "Enter") CargarDatos(1); })" />
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 bg-light"
+                               placeholder="Pedimento / Cliente / Referencia"
+                               @bind="filtros.BusquedaTexto"
+                               @bind:event="oninput"
+                               @onkeyup="@(e => { if (e.Key == "Enter") CargarDatos(1); })" />
                     </div>
                 </div>
                 <div class="col-md-2">
@@ -52,6 +80,7 @@
         </div>
     </div>
 
+    @* === 3. TABLA DE RESULTADOS === *@
     @if (respuesta == null)
     {
         <div class="d-flex justify-content-center p-5">
@@ -62,10 +91,10 @@
     }
     else if (respuesta.Elementos.Count == 0)
     {
-        <div class="alert alert-info text-center shadow-sm border-0">
-            <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
-            <strong>No se encontraron resultados.</strong>
-            <p class="mb-0 mt-2">Intenta ajustar los filtros o registra un nuevo expediente.</p>
+        <div class="alert alert-light text-center shadow-sm border-0 py-5">
+            <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+            <h6 class="fw-bold text-muted">No se encontraron expedientes.</h6>
+            <p class="text-muted small mb-0">Intenta ajustar los filtros de fecha o búsqueda.</p>
         </div>
     }
     else
@@ -73,46 +102,48 @@
         <div class="card shadow-sm border-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light small text-uppercase">
+                    <table class="table table-hover table-striped mb-0 small align-middle">
+                        <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
                             <tr>
-                                <th>Referencia</th>
-                                <th class="ps-4">Pedimento</th>
-                                <th>Cliente</th>
-                                <th class="text-end">Valor Aduana</th>
-                                <th class="text-center" style="width: 150px;">Progreso (Docs)</th>
-                                <th class="text-center">Estado</th>
-                                <th class="text-center">Fecha Registro</th>
-                                <th class="text-end pe-4">Acciones</th>
+                                <th class="ps-4 py-3">Pedimento / Referencia</th>
+                                <th class="py-3">Cliente</th>
+                                <th class="py-3">Valor Aduana</th>
+                                <th class="text-center py-3" style="width: 160px;">Progreso (Docs)</th>
+                                <th class="text-center py-3">Estatus captura</th>
+                                <th class="text-center py-3">Registro</th>
+                                <th class="text-center py-3 pe-4">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @* NOTA: Ahora iteramos sobre respuesta.Elementos, no sobre la variable directa *@
                             @foreach (var item in respuesta.Elementos)
                             {
                                 <tr>
-
-                                    <td class="ps-4 fw-bold text-primary">
-                                        @if (!string.IsNullOrEmpty(item.Referencia))
-                                        {
-                                            @item.Referencia
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted small">Sin referencia</span>
-                                        }
+                                    @* Columna Doble: Pedimento (Principal) y Referencia (Secundaria) *@
+                                    <td class="ps-4">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-primary fs-6">@item.NumeroPedimento</span>
+                                            @if (!string.IsNullOrEmpty(item.Referencia))
+                                            {
+                                                <small class="text-muted text-uppercase" style="font-size: 0.7rem;">REF: @item.Referencia</small>
+                                            }
+                                            else
+                                            {
+                                                <small class="text-muted fst-italic" style="font-size: 0.7rem;">-- Sin Ref --</small>
+                                            }
+                                        </div>
                                     </td>
-                                    <td class="ps-4 fw-bold text-primary">@item.NumeroPedimento</td>
-                                    <td class="ps-4 fw-bold text-primary">  @item.RazonSocial </td>
 
-                                    <td class="text-end fw-bold">
-                                        @((item.TotalValorAduana ?? 0).ToString("C2"))
+                                    <td class="fw-bold text-dark">@item.RazonSocial</td>
+
+                                    <td class="fw-bold text-dark">
+                                        @((item.TotalValorAduana ?? 0))
                                     </td>
-                                    @* === NUEVA CELDA: BARRA DE PROGRESO === *@
+
+                                    @* Barra de Progreso *@
                                     <td class="align-middle">
                                         <div class="d-flex align-items-center justify-content-center gap-2">
-                                            <div class="progress flex-grow-1 shadow-sm bg-secondary bg-opacity-10" style="height: 6px; max-width: 100px;">
-                                                <div class="progress-bar @ObtenerColorBarra(item.Progreso)"
+                                            <div class="progress flex-grow-1 shadow-sm bg-secondary bg-opacity-10 rounded-pill" style="height: 6px; max-width: 100px;">
+                                                <div class="progress-bar rounded-pill @ObtenerColorBarra(item.Progreso)"
                                                      role="progressbar"
                                                      style="width: @(item.Progreso)%; transition: width 0.5s ease;">
                                                 </div>
@@ -122,36 +153,39 @@
                                             </span>
                                         </div>
                                     </td>
+
+                                    @* Estatus (Badges Suaves) *@
                                     <td class="text-center">
                                         @if (item.EstadoEnvio == "COMPLETO")
                                         {
-                                            <span class="badge bg-success">Completo</span>
+                                            <span class="badge bg-success bg-opacity-25 text-success border border-success rounded-pill px-3">Completo</span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary">Borrador</span>
+                                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning rounded-pill px-3">Borrador</span>
                                         }
                                     </td>
 
-
-
-                                    <td class="text-center small text-muted">
+                                    <td class="text-center text-muted">
                                         @item.FechaRegistro?.ToShortDateString()
                                     </td>
-                                    <td class="text-end pe-4">
-                                        <div class="btn-group">
 
-                                            <button class="btn btn-sm btn-outline-info" @onclick="() => AbrirModalDetalle(item)" title="Ver Detalle">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
+                                    @* Acciones (Estilo Limpio) *@
+                                    <td class="text-center pe-4">
+                                        @* Ver Detalle *@
+                                        <button class="btn btn-link btn-sm text-info p-0 me-2" @onclick="() => AbrirModalDetalle(item)" title="Ver Detalle">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
 
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => Editar(item.ManifestacionId)" title="Editar">
-                                                <i class="bi bi-pencil-square"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(item)" title="Eliminar">
-                                                <i class="bi bi-trash3"></i>
-                                            </button>
-                                        </div>
+                                        @* Editar *@
+                                        <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(item.ManifestacionId)" title="Editar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+
+                                        @* Eliminar *@
+                                        <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => Eliminar(item)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -160,26 +194,28 @@
                 </div>
             </div>
 
+            @* Paginador *@
             <div class="card-footer bg-white py-3 border-top-0 d-flex justify-content-between align-items-center">
-                <small class="text-muted">Mostrando @respuesta.Elementos.Count registros de <strong>@respuesta.TotalRegistros</strong> encontrados.</small>
+                <small class="text-muted">
+                    Mostrando @respuesta.Elementos.Count de <strong>@respuesta.TotalRegistros</strong>
+                </small>
 
-                <nav aria-label="Page navigation">
+                <nav>
                     <ul class="pagination pagination-sm mb-0">
-                        @* Botón Anterior *@
                         <li class="page-item @(filtros.Pagina == 1 ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => CargarDatos(filtros.Pagina - 1)">Anterior</button>
+                            <button class="page-link border-0 bg-light text-dark mx-1 rounded" @onclick="() => CargarDatos(filtros.Pagina - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
                         </li>
-
-                        @* Indicador de Página *@
                         <li class="page-item disabled">
-                            <span class="page-link bg-light text-dark border-0 mx-2">
+                            <span class="page-link border-0 bg-white text-muted">
                                 Página @filtros.Pagina de @respuesta.TotalPaginas
                             </span>
                         </li>
-
-                        @* Botón Siguiente *@
                         <li class="page-item @(filtros.Pagina >= respuesta.TotalPaginas ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => CargarDatos(filtros.Pagina + 1)">Siguiente</button>
+                            <button class="page-link border-0 bg-light text-dark mx-1 rounded" @onclick="() => CargarDatos(filtros.Pagina + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
                         </li>
                     </ul>
                 </nav>
@@ -187,7 +223,6 @@
         </div>
     }
 </div>
-
 @* --- MODAL DE DETALLE / RESUMEN (SOLO LECTURA - RF-07) --- *@
 @if (mostrarModalDetalle && manifestacionSeleccionada != null)
 {
@@ -504,18 +539,12 @@
     [CascadingParameter]
     private Task<AuthenticationState> AuthStateTask { get; set; }
     private bool bloquearCamposAA = false;
-
-    // 1. Objeto para guardar los filtros que el usuario escribe
     private PaginacionRequestDto filtros = new PaginacionRequestDto();
-
-    // 2. Objeto para recibir la respuesta PAGINADA (Lista + Metadatos)
-    // NOTA: Ya no usamos List<ManifestacionDto> directamente
     private PaginacionResponseDto<ManifestacionDto>? respuesta;
-
     // Variables para controlar el Modal
     private bool mostrarModalDetalle = false;
     private ManifestacionDto? manifestacionSeleccionada;
-    private int activeCoveIndex = 0; // <-- NUEVA VARIABLE: Para saber cuál está abierto
+    private int activeCoveIndex = 0;
 
 
 
@@ -652,6 +681,7 @@
     // Método para descargar el PDF (Pendiente de tu lógica de backend)
     private async Task DescargarPDF()
     {
+
         if (manifestacionSeleccionada != null)
         {
             var url = $"api/ManifestacionesValor/{manifestacionSeleccionada.ManifestacionId}/pdf";
@@ -668,7 +698,8 @@
             }
             else
             {
-                await MostrarToast("Error al generar el PDF.", SweetAlertIcon.Error);
+                var mensajeError = await response.Content.ReadAsStringAsync();
+                await MostrarToast("Error al generar el PDF: " + mensajeError, SweetAlertIcon.Error);
             }
         }
     }

@@ -218,11 +218,9 @@
 }
 
 @code {
-    // 1. CAMBIO PRINCIPAL: Usamos el DTO de Respuesta Paginada en vez de List<>
     private PaginacionResponseDto<ClienteDto>? respuesta;
     private PaginacionRequestDto filtros = new PaginacionRequestDto { RegistrosPorPagina = 10 };
 
-    // Variables del Modal (Se mantienen igual)
     private ClienteDto cliente = new();
     private bool mostrarModal = false;
     private ClienteEmail tempEmail = new();
@@ -233,7 +231,6 @@
         await CargarClientes(1);
     }
 
-    // 2. ACTUALIZADO: Acepta número de página y usa los filtros
     private async Task CargarClientes(int pagina)
     {
         try
@@ -262,14 +259,14 @@
 
     private void AgregarEmail()
     {
-        if (string.IsNullOrEmpty(tempEmail.Email)) { MostrarToast("Correo obligatorio", SweetAlertIcon.Warning); return; }
+        if (string.IsNullOrEmpty(tempEmail.Email)) { MostrarToast("No has agregado ningún correo", SweetAlertIcon.Warning); return; }
         cliente.Emails.Add(tempEmail);
         tempEmail = new();
     }
 
     private void AgregarTelefono()
     {
-        if (string.IsNullOrEmpty(tempTel.Numero)) { MostrarToast("Teléfono obligatorio", SweetAlertIcon.Warning); return; }
+        if (string.IsNullOrEmpty(tempTel.Numero)) { MostrarToast("No has agregado un número de teléfono", SweetAlertIcon.Warning); return; }
         cliente.Telefonos.Add(tempTel);
         tempTel = new();
     }
@@ -299,6 +296,7 @@
     {
         if (string.IsNullOrEmpty(cliente.RFC) || cliente.RFC.Length < 12) { await MostrarToast("RFC inválido", SweetAlertIcon.Warning); return; }
         if (string.IsNullOrEmpty(cliente.RazonSocial)) { await MostrarToast("Razón Social obligatoria", SweetAlertIcon.Warning); return; }
+        if (string.IsNullOrEmpty(cliente?.Emails.FirstOrDefault()?.Email)) { await MostrarToast("Debes registrar al menos un correo electrónico", SweetAlertIcon.Warning); return; }
 
         try
         {
@@ -358,7 +356,7 @@
             Toast = true,
             Position = SweetAlertPosition.TopEnd,
             ShowConfirmButton = false,
-            Timer = 2000,
+            Timer = 1000,
             Icon = icono,
             Title = mensaje
         });

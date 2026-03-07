@@ -10,7 +10,7 @@
                 <h6 class="mb-0 fw-bold text-uppercase">Administración - Catálogo de Documentos</h6>
             </div>
             <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="AbrirModalNuevo">
-                <i class="bi bi-plus-lg"></i> Crear Nuevo Tipo de Documento
+                <i class="bi bi-plus-lg"></i> NUEVO DOCUMENTO
             </button>
         </div>
 
@@ -31,16 +31,16 @@
             </div>
         </div>
 
-        @* === TABLA DE DATOS === *@
+        @* === TABLA DE DATOS ESTANDARIZADA === *@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0 small align-middle">
                     <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
                         <tr>
                             <th class="ps-3 py-2">Nombre del Documento</th>
-                            <th class="text-center">Obligatorio</th>
-                            <th class="text-center">Estatus</th>
-                            <th class="text-center">Acciones</th>
+                            <th class="text-center py-2">Obligatorio</th>
+                            <th class="text-center py-2">Estatus</th>
+                            <th class="text-center py-2">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -58,9 +58,20 @@
                             {
                                 <tr>
                                     <td class="ps-3 fw-bold text-dark">@item.NombreDocumento</td>
+
+                                    @* Columna Obligatorio *@
                                     <td class="text-center">
-                                        <input class="form-check-input" type="checkbox" checked="@item.EsObligatorio" disabled />
+                                        @if (item.EsObligatorio)
+                                        {
+                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
                                     </td>
+
+                                    @* Columna Estatus *@
                                     <td class="text-center">
                                         @if (item.Estatus)
                                         {
@@ -71,24 +82,27 @@
                                             <span class="badge bg-danger bg-opacity-25 text-danger border border-danger rounded-pill px-3">Inactivo</span>
                                         }
                                     </td>
+
+                                    @* Columna Acciones (ESTILO IGUAL A CLIENTES) *@
                                     <td class="text-center">
-                                        <div class="btn-group">
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => Editar(item)" title="Editar">
-                                                <i class="bi bi-pencil-square"></i>
+                                        @* Botón Editar *@
+                                        <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(item)" title="Editar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+
+                                        @* Botón Eliminar / Reactivar *@
+                                        @if (item.Estatus)
+                                        {
+                                            <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => Eliminar(item)" title="Desactivar">
+                                                <i class="bi bi-trash"></i>
                                             </button>
-                                            @if (item.Estatus)
-                                            {
-                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(item)" title="Eliminar (Desactivar)">
-                                                    <i class="bi bi-trash3"></i>
-                                                </button>
-                                            }
-                                            else
-                                            {
-                                                <button class="btn btn-sm btn-outline-success" @onclick="() => Reactivar(item)" title="Reactivar">
-                                                    <i class="bi bi-arrow-clockwise"></i>
-                                                </button>
-                                            }
-                                        </div>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-link btn-sm text-success p-0" @onclick="() => Reactivar(item)" title="Reactivar">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -297,7 +311,7 @@
             Toast = true,
             Position = SweetAlertPosition.TopEnd,
             ShowConfirmButton = false,
-            Timer = 3000,
+            Timer = 1000,
             Icon = icono,
             Title = mensaje
         });

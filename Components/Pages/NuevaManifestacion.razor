@@ -383,7 +383,7 @@
     @bind-Mostrar="mostrarModalDocumentos"
     Documentos="manifestacion.Documentos"
     Notas="manifestacion.HistorialNotas"
-    SoloLectura="bloquearCamposAA"
+    SoloLectura="@(manifestacion.EstadoEnvio == "COMPLETO")"
     EsAA="@(!bloquearCamposAA)"
 
     OnSubirArchivo="SubirArchivoDesdeComponente"
@@ -2025,8 +2025,7 @@
         catch (Exception ex)
         {
             Console.WriteLine("Advertencia: No se pudo cargar el catálogo de documentos inicial. " + ex.Message);
-            // No lanzamos error con SweetAlert para no bloquear al usuario si solo falla esto,
-            // pero el checklist aparecerá vacío.
+           
         }
     }
     public class CatalogoDto { public string Clave { get; set; } = ""; public string Descripcion { get; set; } = ""; }
@@ -2046,7 +2045,7 @@
                     NumeroEdocument = tempEdocument.Trim()
                 });
             }
-            tempEdocument = string.Empty; // Limpiamos el input después de agregar
+            tempEdocument = string.Empty; 
         }
     }
 
@@ -2054,7 +2053,7 @@
     {
         manifestacion.Edocuments.Remove(edoc);
     }
-    // <--- FIN DE AGREGADO
+
 
 
 }
