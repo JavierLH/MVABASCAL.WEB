@@ -131,13 +131,13 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-muted">ROL *</label>
-                                <InputSelect class="form-select form-select-sm" @bind-Value="usuario.RolId">
+                                <select class="form-select form-select-sm" @bind="RolSeleccionado">
                                     <option value="0">-- Seleccione --</option>
                                     @foreach (var r in ListaRoles)
                                     {
                                         <option value="@r.RolId">@r.NombreRol</option>
                                     }
-                                </InputSelect>
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-muted">USUARIO (LOGIN) *</label>
@@ -145,7 +145,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-muted">CORREO ELECTRÓNICO *</label>
-                                @if (ObtenerNombreRol(usuario.RolId) == "Usuario")
+                                @if (usuario.RolId == 3) // 3 = Usuario
                                 {
                                     <select class="form-select form-select-sm" @bind="usuario.Email">
                                         <option value="">-- Seleccione Correo --</option>
@@ -305,6 +305,24 @@
         }
     }
 
+    private int RolSeleccionado
+    {
+        get => usuario.RolId;
+        set
+        {
+            if (usuario.RolId != value)
+            {
+                usuario.RolId = value;
+
+                // Si se cambió al Rol = 3 (Usuario) y hay más de 1 cliente seleccionado, limpiar
+                if (value == 3 && ClientesSeleccionadosIds.Count > 1)
+                {
+                    ClientesSeleccionadosIds.Clear();
+                }
+            }
+        }
+    }
+
     private void Editar(Usuario item)
     {
         // Clonamos el objeto para edición segura
@@ -346,11 +364,10 @@
     private void ToggleCliente(int clienteId, object? checkedValue)
     {
         bool isChecked = (bool)(checkedValue ?? false);
-        string nomRol = ObtenerNombreRol(usuario.RolId);
 
         if (isChecked)
         {
-            if (nomRol == "AA" || nomRol == "Usuario")
+            if (usuario.RolId == 3) // 3 = Usuario (1 solo cliente permitido)
             {
                 ClientesSeleccionadosIds.Clear();
             }
@@ -364,9 +381,9 @@
 
     private async Task SeleccionarTodos()
     {
-        string nomRol = ObtenerNombreRol(usuario.RolId);
-        if (nomRol == "AA" || nomRol == "Usuario")
+        if (usuario.RolId == 3) // 3 = Usuario
         {
+            string nomRol = ObtenerNombreRol(usuario.RolId);
             await MostrarToast($"El rol '{nomRol}' solo permite un cliente.", SweetAlertIcon.Warning);
             return;
         }
@@ -387,11 +404,11 @@
             return;
         }
 
-        string nomRol = ObtenerNombreRol(usuario.RolId);
-        if (nomRol == "AA" || nomRol == "Usuario")
+        if (usuario.RolId == 3) // 3 = Usuario
         {
             if (ClientesSeleccionadosIds.Count != 1)
             {
+                string nomRol = ObtenerNombreRol(usuario.RolId);
                 await MostrarToast($"Para el rol '{nomRol}', debes seleccionar exactamente un cliente.", SweetAlertIcon.Warning);
                 return;
             }
