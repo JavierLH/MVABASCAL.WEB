@@ -40,6 +40,39 @@
 @code {
     // Variable para controlar el estado del menú
     private bool menuColapsado = false;
+    private bool verifyTerms = true;
+    [Inject] private SistemaAduanero.Web.Services.TermsStateService TermsState { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NavManager.LocationChanged += async (s, e) => {
+            await VerificarTerminos();
+            await InvokeAsync(StateHasChanged);
+        };
+        await VerificarTerminos();
+    }
+
+    private async Task VerificarTerminos()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            if (!NavManager.Uri.Contains("/terminos") && !NavManager.Uri.Contains("/login"))
+            {
+                if (!TermsState.HasAcceptedTerms)
+                {
+                    NavManager.NavigateTo("/terminos");
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= async (s, e) => { await VerificarTerminos(); };
+    }
 
     private void ToggleMenu()
     {
@@ -51,5 +84,11 @@
         var customAuthProvider = (CustomAuthStateProvider)AuthStateProvider;
         await customAuthProvider.CerrarSesion();
         NavManager.NavigateTo("/login", forceLoad: true);
+    }
+    
+    // Clase auxiliar para la respuesta del endpoint
+    public class TerminosResponse
+    {
+        public bool Aceptado { get; set; }
     }
 }

@@ -1,0 +1,106 @@
+@page "/terminos"
+@using Microsoft.AspNetCore.Components.Authorization
+@using SistemaAduanero.Shared.DTOs
+@using SistemaAduanero.Web.Auth
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Términos y Condiciones</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-header bg-primary text-white text-center py-3 rounded-top-4">
+                <h4 class="mb-0 fw-bold">Términos y Condiciones de Uso</h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="lead text-muted mb-4 text-center">
+                    Por favor, lee y acepta los siguientes términos y condiciones para poder utilizar el sistema.
+                </p>
+
+                <div class="p-3 bg-light border rounded mb-4" style="max-height: 300px; overflow-y: auto;">
+                    <h5>1. Aceptación de los Términos</h5>
+                    <p>Al acceder y utilizar este sistema, aceptas estar sujeto a estos términos y condiciones de uso, a todas las leyes aplicables y a las regulaciones, y acuerdas que eres responsable del cumplimiento de cualquier ley local aplicable.</p>
+
+                    <h5>2. Licencia de Uso</h5>
+                    <p>Se concede permiso para descargar temporalmente una copia de los materiales (información o software) en el sitio web para visualización transitoria personal y no comercial solamente. Esta es la concesión de una licencia, no una transferencia de título.</p>
+
+                    <h5>3. Privacidad</h5>
+                    <p>Tu privacidad es importante para nosotros. Es nuestra política respetar tu privacidad con respecto a cualquier información que podamos recopilar tuya a través de nuestro sitio web u otros sitios que poseemos y operamos.</p>
+                    
+                    <!-- DUMMY TEXT PARA EXPANDIR LUEGO -->
+                    <p><em>(El texto de estos términos puede ser modificado posteriormente por el administrador.)</em></p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @errorMessage
+                    </div>
+                }
+
+                <div class="d-flex justify-content-end gap-3 mt-4">
+                    <button class="btn btn-outline-danger px-4" @onclick="RechazarTerminos" disabled="@isProcessing">
+                        No Acepto
+                    </button>
+                    <button class="btn btn-primary px-4" @onclick="AceptarTerminos" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Procesando...</span>
+                        }
+                        else
+                        {
+                            <span>Acepto y Entiendo</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isProcessing = false;
+    private string? errorMessage = null;
+    [Inject] private SistemaAduanero.Web.Services.TermsStateService TermsState { get; set; } = default!;
+
+    private async Task AceptarTerminos()
+    {
+        isProcessing = true;
+        errorMessage = null;
+
+        var respuesta = new ResponderTerminosDto { Aceptado = true };
+        var response = await Http.PostAsJsonAsync("api/Auth/responder-terminos", respuesta);
+
+        if (response.IsSuccessStatusCode)
+        {
+            TermsState.HasAcceptedTerms = true;
+            NavigationManager.NavigateTo("/"); // Redirige a home por Blazor router
+        }
+        else
+        {
+            errorMessage = "Ocurrió un error al registrar su respuesta. Intente nuevamente.";
+            isProcessing = false;
+        }
+    }
+
+    private async Task RechazarTerminos()
+    {
+        isProcessing = true;
+        errorMessage = null;
+
+        var respuesta = new ResponderTerminosDto { Aceptado = false };
+        var response = await Http.PostAsJsonAsync("api/Auth/responder-terminos", respuesta);
+
+        // Si es exitoso (o incluso si falla, cerramos sesión igual por rechazar)
+        if (AuthStateProvider is CustomAuthStateProvider customAuthStateProvider)
+        {
+            await customAuthStateProvider.CerrarSesion();
+        }
+
+        NavigationManager.NavigateTo("/login");
+    }
+}

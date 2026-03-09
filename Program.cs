@@ -23,6 +23,7 @@ builder.Services.AddBlazoredLocalStorage();
 // 2. Servicio de Autenticaci�n
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddScoped<SistemaAduanero.Web.Services.TermsStateService>();
 
 // Configuraci�n de Autenticaci�n para soportar [Authorize]
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
