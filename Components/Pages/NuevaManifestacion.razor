@@ -21,9 +21,14 @@
                 <h6 class="mb-0 fw-bold text-uppercase">Expediente de Valor</h6>
                
             </div>
-            <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="GuardarTodo">
-                <i class="bi bi-floppy-fill"></i> GUARDAR
-            </button>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-light btn-sm fw-bold text-primary shadow-sm me-2" @onclick="AbrirModalProforma">
+                    <i class="bi bi-file-pdf-fill"></i> LEER PROFORMA PEDIMENTO
+                </button>
+                <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="GuardarTodo">
+                    <i class="bi bi-floppy-fill"></i> GUARDAR
+                </button>
+            </div>
         </div>
 
         <div class="card-body bg-white">
@@ -996,6 +1001,58 @@
     </div>
 }
 
+@* === MODAL LEER PROFORMA PEDIMENTO === *@
+@if (mostrarModalProforma && proformaExtraida == null)
+{ 
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fs-6 text-uppercase fw-bold">
+                        <i class="bi bi-file-pdf-fill"></i> Leer Proforma Pedimento
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalProforma"></button>
+                </div>
+                <div class="modal-body bg-light">
+
+                    @* --- ZONA DE CARGA --- *@
+                    <div class="p-4 border rounded bg-white text-center shadow-sm mb-3">
+                        <i class="bi bi-cloud-upload text-primary mb-3" style="font-size: 2.5rem;"></i>
+                        <h6 class="fw-bold text-secondary mb-2">Cargar PDF Pedimento</h6>
+                        <p class="text-muted small mb-3">Seleccione el archivo PDF del pedimento para extraer los datos.</p>
+
+                        <div class="d-flex justify-content-center align-items-center gap-3">
+                            <InputFile class="form-control form-control-sm" style="max-width: 320px;"
+                                       accept=".pdf"
+                                       OnChange="OnPdfSeleccionado" />
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-3"
+                                    @onclick="SubirPdfProforma"
+                                    disabled="@(archivoPdfProforma == null || cargandoProforma)">
+                                @if (cargandoProforma)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    <span>Procesando...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-search"></i>
+                                    <span> Extraer Datos</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                   
+
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModalProforma">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public int? Id { get; set; }
 
@@ -1047,6 +1104,14 @@
     private ConceptoValorDto? incrementableEnEdicion = null;
     private ConceptoValorDto? decrementableEnEdicion = null;
 
+    // Estado Modal Proforma Pedimento
+    private bool mostrarModalProforma = false;
+    private IBrowserFile? archivoPdfProforma = null;
+    private bool cargandoProforma = false;
+
+    private PedimentoProformaDto? proformaExtraida = null;
+
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateTask;
@@ -1063,7 +1128,7 @@
         await CargarDatosDefault();
         ResetTemporales();
     }
-    
+
 
 
     private async Task CargarClietes()
@@ -1092,6 +1157,8 @@
                 manifestacion.ClienteId = cliente.ClienteId;
                 manifestacion.Cliente = cliente; // Para que se vea el RFC en el input readonly
 
+
+
                 // Opcional: Llenar otros datos automáticos (Dirección, etc.)
             }
         }
@@ -1114,27 +1181,25 @@
             else
             {
                 // Si es NUEVO (Id es null), cargamos el default desde tu nuevo controlador
-           
+
+                var rfc = defaults.GetProperty("rfc").GetString();
+                var nombre = defaults.GetProperty("nombre").GetString();
+                var figura = defaults.GetProperty("figura").GetString();
 
 
-                    var rfc = defaults.GetProperty("rfc").GetString();
-                    var nombre = defaults.GetProperty("nombre").GetString();
-                    var figura = defaults.GetProperty("figura").GetString();
-
-
-                    if (!string.IsNullOrEmpty(rfc))
-                    {
-                        manifestacion.Consultas.Add(new ConsultaRfcDto
+                if (!string.IsNullOrEmpty(rfc))
+                {
+                    manifestacion.Consultas.Add(new ConsultaRfcDto
                         {
                             RfcConsulta = rfc,
                             TipoFigura = figura
 
                         });
-                    }
-                await CargarChecklistDesdeCatalogo();
                 }
-           
+                await CargarChecklistDesdeCatalogo();
             }
+
+        }
         catch (Exception ex)
         {
             Console.WriteLine("Nota: No se cargaron defaults (puede que no estén configurados). " + ex.Message);
@@ -1252,14 +1317,14 @@
     private void AgregarRfcConsulta()
     {
         if (!string.IsNullOrEmpty(tempRfc.RfcConsulta) && !string.IsNullOrEmpty(tempRfc.TipoFigura)) 
-            {
-                manifestacion.Consultas.Add(new ConsultaRfcDto
+        {
+            manifestacion.Consultas.Add(new ConsultaRfcDto
                 {
                     RfcConsulta = tempRfc.RfcConsulta, TipoFigura = tempRfc.TipoFigura
                 }
-            );
+        );
             tempRfc = new();
-            }
+        }
     }
 
     private void AbrirModalNuevo() 
@@ -1292,6 +1357,123 @@
     }
 
     private void CerrarModal() => mostrarModal = false;
+
+    // Métodos Modal Proforma Pedimento
+    private void AbrirModalProforma()
+    {
+        archivoPdfProforma = null;
+        mostrarModalProforma = true;
+        proformaExtraida = null;
+    }
+
+    private void CerrarModalProforma()
+    {
+        mostrarModalProforma = false;
+        archivoPdfProforma = null;
+    }
+
+    private void OnPdfSeleccionado(InputFileChangeEventArgs e)
+    {
+        archivoPdfProforma = e.File;
+    }
+
+    private async Task SubirPdfProforma()
+    {
+        if (archivoPdfProforma == null) return;
+
+        cargandoProforma = true;
+        StateHasChanged();
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            var stream = archivoPdfProforma.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+            content.Add(fileContent, "archivo", archivoPdfProforma.Name);
+
+            var response = await Http.PostAsync("api/utilidades/parsear-pdf", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                proformaExtraida = await response.Content.ReadFromJsonAsync<PedimentoProformaDto>();
+
+                // SOLUCIÓN 1: Solo consultamos la BD si estamos editando (Id tiene valor).
+                if (Id.HasValue)
+                {
+                    var res = await Http.GetFromJsonAsync<ManifestacionDto>($"api/ManifestacionesValor/{Id.Value}");
+                }
+
+                // 2. CONSULTA AL ENDPOINT DE CLIENTES (Lista Simple)
+                var clientes = await Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes/lista-simple");
+
+                // 3. Buscar si el RFC extraído del PDF existe en nuestra base de datos
+                var clienteEncontrado = clientes?.FirstOrDefault(c =>
+                    c.RFC?.Trim().ToUpper() == proformaExtraida.RfcImportador?.Trim().ToUpper());
+
+                if (clienteEncontrado != null)
+                {
+                    // 4. Asignación de valores al modelo de la vista
+                    manifestacion.RfcImportador = proformaExtraida.RfcImportador;
+                    manifestacion.ReferenciaAdmin = proformaExtraida.NumeroPedimento;
+                    manifestacion.Referencia = proformaExtraida.Referencia;
+
+                    // Actualizamos el Select y la información del Cliente
+                    OnClienteSeleccionado(clienteEncontrado.ClienteId);
+
+                    // =========================================================
+                    // 5. NUEVO: AGREGAR LOS EDOCUMENTS EXTRAÍDOS A LA LISTA
+                    // =========================================================
+
+                    // Aseguramos que la lista esté inicializada
+                    manifestacion.Edocuments ??= new List<ManifestacionEdocumentDto>();
+
+                    // Metemos los 3 complementos en un arreglo y filtramos los que vengan nulos o vacíos
+                    var edocsExtraidos = new[]
+                    {
+                    proformaExtraida.Complemento1,
+                    proformaExtraida.Complemento2,
+                    proformaExtraida.Complemento3
+                }.Where(e => !string.IsNullOrWhiteSpace(e)).ToList();
+
+                    foreach (var edoc in edocsExtraidos)
+                    {
+                        // Validamos que no exista ya en la lista para evitar duplicados
+                        if (!manifestacion.Edocuments.Any(e => e.NumeroEdocument?.Trim().ToUpper() == edoc.Trim().ToUpper()))
+                        {
+                            manifestacion.Edocuments.Add(new ManifestacionEdocumentDto
+                            {
+                                AnexoId = 0, // 0 porque es un registro nuevo
+                                NumeroEdocument = edoc.Trim(),
+                                Descripcion = "Extraído de Proforma" // Opcional, para saber de dónde salió
+                            });
+                        }
+                    }
+                    // =========================================================
+
+                    await MostrarToast($"Encontrado: {clienteEncontrado.RazonSocial} y {edocsExtraidos.Count} eDocuments", SweetAlertIcon.Success);
+                }
+                else
+                {
+                    await MostrarToast("RFC extraído pero no encontrado en el catálogo de clientes registra el cliente.", SweetAlertIcon.Warning);
+                }
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                await MostrarToast("Error al parsear PDF: " + error, SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast("Error: " + ex.Message, SweetAlertIcon.Error);
+        }
+        finally
+        {
+            cargandoProforma = false;
+            StateHasChanged();
+        }
+    }
 
     // private void GuardarCoveEnLista() { if (coveEnEdicion != null) { var i = manifestacion.Coves.IndexOf(coveEnEdicion); if (i != -1) manifestacion.Coves[i] = coveTemporal; } else { manifestacion.Coves.Add(coveTemporal); } CerrarModal(); }
     private async Task GuardarCoveEnLista()
