@@ -1408,11 +1408,20 @@
                 var clientes = await Http.GetFromJsonAsync<List<ClienteDto>>("api/clientes/lista-simple");
 
                 // 3. Buscar si el RFC extraído del PDF existe en nuestra base de datos
-                var clienteEncontrado = clientes?.FirstOrDefault(c =>
+                var clienteBD = clientes?.FirstOrDefault(c =>
                     c.RFC?.Trim().ToUpper() == proformaExtraida.RfcImportador?.Trim().ToUpper());
 
-                if (clienteEncontrado != null)
+                if (clienteBD != null)
                 {
+                    // Validar si el usuario actual tiene asignado este cliente
+                    var clienteEncontrado = ListaMisClientes?.FirstOrDefault(c => c.ClienteId == clienteBD.ClienteId);
+
+                    if (clienteEncontrado == null)
+                    {
+                        await MostrarToast("Error: El cliente/importador de este pedimento no está asignado a tu usuario.", SweetAlertIcon.Error);
+                        return; // Detiene la carga de los datos del PDF y va al finally
+                    }
+
                     // 4. Asignación de valores al modelo de la vista
                     manifestacion.RfcImportador = proformaExtraida.RfcImportador;
                     manifestacion.ReferenciaAdmin = proformaExtraida.NumeroPedimento;
