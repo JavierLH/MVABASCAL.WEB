@@ -145,7 +145,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-muted">CORREO ELECTRÓNICO *</label>
-                                @if (ObtenerNombreRol(usuario.RolId) == "Usuario")
+                                @if (ObtenerNombreRol(usuario.RolId) == "Cliente")
                                 {
                                     <select class="form-select form-select-sm" @bind="usuario.Email">
                                         <option value="">-- Seleccione Correo --</option>
