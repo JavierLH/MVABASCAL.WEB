@@ -1435,9 +1435,8 @@
                     // =========================================================
 
                     // Aseguramos que la lista esté inicializada
-                    manifestacion.Edocuments ??= new List<ManifestacionEdocumentDto>();
-
-                    // Metemos los 3 complementos en un arreglo y filtramos los que vengan nulos o vacíos
+                    
+                    /*manifestacion.Edocuments ??= new List<ManifestacionEdocumentDto>();
                     var edocsExtraidos = new[]
                     {
                     proformaExtraida.Complemento1,
@@ -1457,10 +1456,10 @@
                                 Descripcion = "Extraído de Proforma" // Opcional, para saber de dónde salió
                             });
                         }
-                    }
+                    }*/
                     // =========================================================
 
-                    await MostrarToast($"Encontrado: {clienteEncontrado.RazonSocial} y {edocsExtraidos.Count} eDocuments", SweetAlertIcon.Success);
+                    await MostrarToast($"Encontrado: {clienteEncontrado.RazonSocial}", SweetAlertIcon.Success);
                 }
                 else
                 {
