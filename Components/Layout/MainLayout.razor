@@ -4,9 +4,12 @@
 @inject NavigationManager NavManager
 
 <div class="page @(menuColapsado ? "menu-minimized" : "")">
-    <div class="sidebar">
-        <NavMenu ToggleSidebar="ToggleMenu" MenuColapsado="@menuColapsado" />
-    </div>
+    @if (TermsState.HasAcceptedTerms)
+    {
+        <div class="sidebar">
+            <NavMenu ToggleSidebar="ToggleMenu" MenuColapsado="@menuColapsado" />
+        </div>
+    }
 
     <main>
         <div class="top-row px-4 auth-bar d-flex justify-content-between align-items-center">
