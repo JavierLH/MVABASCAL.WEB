@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using SistemaAduanero.Web.Auth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
@@ -45,11 +45,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        NavManager.LocationChanged += async (s, e) => {
-            await VerificarTerminos();
-            await InvokeAsync(StateHasChanged);
-        };
+        NavManager.LocationChanged += OnLocationChanged;
         await VerificarTerminos();
+    }
+
+    private async void OnLocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        await VerificarTerminos();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task VerificarTerminos()
@@ -59,7 +62,10 @@
 
         if (user.Identity?.IsAuthenticated == true)
         {
-            if (!NavManager.Uri.Contains("/terminos") && !NavManager.Uri.Contains("/login"))
+            if (!NavManager.Uri.Contains("/terminos") && 
+                !NavManager.Uri.Contains("/login") && 
+                !NavManager.Uri.Contains("/recuperar-password") && 
+                !NavManager.Uri.Contains("/restablecer-password"))
             {
                 if (!TermsState.HasAcceptedTerms)
                 {
@@ -71,7 +77,7 @@
 
     public void Dispose()
     {
-        NavManager.LocationChanged -= async (s, e) => { await VerificarTerminos(); };
+        NavManager.LocationChanged -= OnLocationChanged;
     }
 
     private void ToggleMenu()

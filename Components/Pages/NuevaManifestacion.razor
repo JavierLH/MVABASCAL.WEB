@@ -1,4 +1,4 @@
-﻿@page "/manifestaciones/nueva"
+@page "/manifestaciones/nueva"
 @page "/manifestaciones/editar/{Id:int}"
 @using SistemaAduanero.Shared.DTOs
 @using SistemaAduanero.Shared.DTOs.SistemaAduanero.Shared.DTOs
@@ -1430,33 +1430,72 @@
                     // Actualizamos el Select y la información del Cliente
                     OnClienteSeleccionado(clienteEncontrado.ClienteId);
 
+                    // Totales globales
+                    if (decimal.TryParse(proformaExtraida.ValorAduana, out decimal valorAduana))
+                    {
+                        manifestacion.TotalValorAduana = valorAduana;
+                    }
+
+                    if (proformaExtraida.Incrementales != null && proformaExtraida.Incrementales.Length > 0)
+                    {
+                        decimal.TryParse(proformaExtraida.Incrementales[0], out decimal incFletes);
+                        decimal.TryParse(proformaExtraida.Incrementales[1], out decimal incSeguros);
+                        decimal.TryParse(proformaExtraida.Incrementales[2], out decimal incEmbalajes);
+                        decimal.TryParse(proformaExtraida.Incrementales[3], out decimal incOtros);
+                        manifestacion.TotalIncrementables = incFletes + incSeguros + incEmbalajes + incOtros;
+                    }
+
+                    if (proformaExtraida.Decrementables != null && proformaExtraida.Decrementables.Length > 0)
+                    {
+                        decimal.TryParse(proformaExtraida.Decrementables[0], out decimal decFletes);
+                        decimal.TryParse(proformaExtraida.Decrementables[1], out decimal decSeguros);
+                        decimal.TryParse(proformaExtraida.Decrementables[2], out decimal decEmbalajes);
+                        decimal.TryParse(proformaExtraida.Decrementables[3], out decimal decOtros);
+                        manifestacion.TotalDecrementables = decFletes + decSeguros + decEmbalajes + decOtros;
+                    }
+
                     // =========================================================
-                    // 5. NUEVO: AGREGAR LOS EDOCUMENTS EXTRAÍDOS A LA LISTA
+                    // 5. NUEVO: AGREGAR LOS COVES EXTRAÍDOS A LA LISTA
                     // =========================================================
 
-                    // Aseguramos que la lista esté inicializada
-                    
-                    /*manifestacion.Edocuments ??= new List<ManifestacionEdocumentDto>();
-                    var edocsExtraidos = new[]
-                    {
-                    proformaExtraida.Complemento1,
-                    proformaExtraida.Complemento2,
-                    proformaExtraida.Complemento3
-                }.Where(e => !string.IsNullOrWhiteSpace(e)).ToList();
+                    manifestacion.Coves ??= new List<CoveDetalleDto>();
 
-                    foreach (var edoc in edocsExtraidos)
+                    if (proformaExtraida.Anexos != null)
                     {
-                        // Validamos que no exista ya en la lista para evitar duplicados
-                        if (!manifestacion.Edocuments.Any(e => e.NumeroEdocument?.Trim().ToUpper() == edoc.Trim().ToUpper()))
+                        foreach (var anexo in proformaExtraida.Anexos)
                         {
-                            manifestacion.Edocuments.Add(new ManifestacionEdocumentDto
+                            if (!string.IsNullOrWhiteSpace(anexo.COVE) && 
+                                !manifestacion.Coves.Any(c => c.NumeroCove?.Trim().ToUpper() == anexo.COVE.Trim().ToUpper()))
                             {
-                                AnexoId = 0, // 0 porque es un registro nuevo
-                                NumeroEdocument = edoc.Trim(),
-                                Descripcion = "Extraído de Proforma" // Opcional, para saber de dónde salió
-                            });
+                                var nuevoCove = new CoveDetalleDto
+                                {
+                                    IdTemporal = Guid.NewGuid().ToString(),
+                                    NumeroCove = anexo.COVE.Trim(),
+                                    NumeroPedimento = anexo.NumeroFactura?.Trim(), // FACTURA
+                                    Incoterm = proformaExtraida.Incoterm,
+                                    ExisteVinculacion = (!string.IsNullOrWhiteSpace(proformaExtraida.Vinculacion) && proformaExtraida.Vinculacion.Trim().ToUpper() == "SI"),
+                                    Aduana = defaultAduana,
+                                    Patente = defaultPatente,
+                                    PreciosPagados = new(),
+                                    PreciosPorPagar = new(),
+                                    Compensaciones = new(),
+                                    Incrementables = new(),
+                                    Decrementables = new()
+                                };
+
+                                if (!string.IsNullOrWhiteSpace(anexo.MetodoValoracion))
+                                {
+                                    var metodoVal = ListaMetodosValoracion.FirstOrDefault(m => m.Clave?.Trim().ToUpper() == anexo.MetodoValoracion.Trim().ToUpper());
+                                    if (metodoVal != null)
+                                    {
+                                        nuevoCove.MetodoValoracion = metodoVal.Clave;
+                                    }
+                                }
+
+                                manifestacion.Coves.Add(nuevoCove);
+                            }
                         }
-                    }*/
+                    }
                     // =========================================================
 
                     await MostrarToast($"Encontrado: {clienteEncontrado.RazonSocial}", SweetAlertIcon.Success);
