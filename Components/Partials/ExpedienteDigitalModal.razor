@@ -1,4 +1,5 @@
-﻿@using SistemaAduanero.Shared.DTOs
+@using SistemaAduanero.Shared.DTOs
+@inject IJSRuntime JS
 
 @if (Mostrar)
 {
@@ -59,6 +60,7 @@
                                 <div style="flex: 2;">Documento</div>
                                 <div style="flex: 1; text-align: center;">Archivo</div>
                                 <div style="flex: 1; text-align: center;">Controles (AA)</div>
+                                <div style="flex: 1; text-align: center;">VUCEM</div>
                             </div>
 
                             <div class="list-group list-group-flush">
@@ -158,6 +160,18 @@
                                                     </small>
                                                 </div>
 
+                                            </div>
+
+                                            <div class="d-flex flex-column justify-content-center gap-1 border-start ps-3 pe-2" style="flex: 1; min-width: 120px;">
+                                                <input type="text" class="form-control form-control-sm text-center" placeholder="e-Document" value="@doc.Edocument" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
+                                                <input type="text" class="form-control form-control-sm text-center" placeholder="N. Operación" value="@doc.NOperacion" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
+                                                <div class="mt-2">
+                                                    <button type="button" class="btn btn-primary btn-sm w-100 py-0" style="font-size: 0.70rem; height: 24px;" 
+                                                            @onclick="@(() => EnviarAVucem(doc))" 
+                                                            disabled="@(SoloLectura || string.IsNullOrEmpty(doc.NombreArchivo))">
+                                                        <i class="bi bi-send"></i> Enviar VUCEM
+                                                    </button>
+                                                </div>
                                             </div>
 
                                         </div>
@@ -265,7 +279,20 @@
     {
         if (tipo == "REVISADO") doc.Revisado = valor;
         if (tipo == "EXENTO") doc.Exento = valor;
+        // if (tipo == "ENVIAR_VUCEM") doc.EnviarVucem = valor; // Ya no usamos checkbox
         await DocumentoModificado.InvokeAsync(doc);
+    }
+
+    private async Task EnviarAVucem(DocumentoExpedienteDto doc)
+    {
+        if (string.IsNullOrEmpty(doc.NombreArchivo))
+        {
+            await JS.InvokeVoidAsync("alert", "Error: No hay ningún archivo cargado para enviar a VUCEM.");
+            return;
+        }
+
+        string mensaje = $"Enviando documento a VUCEM...\n\nArchivo: {doc.NombreDocumento}\ne-Document: {doc.Edocument ?? "N/A"}\nN. Operación: {doc.NOperacion ?? "N/A"}";
+        await JS.InvokeVoidAsync("alert", mensaje);
     }
 
     private async Task Enviar()
