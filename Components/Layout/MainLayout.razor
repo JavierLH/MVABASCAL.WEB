@@ -1,12 +1,15 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using SistemaAduanero.Web.Auth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
 
 <div class="page @(menuColapsado ? "menu-minimized" : "")">
-    <div class="sidebar">
-        <NavMenu ToggleSidebar="ToggleMenu" MenuColapsado="@menuColapsado" />
-    </div>
+    @if (TermsState.HasAcceptedTerms)
+    {
+        <div class="sidebar">
+            <NavMenu ToggleSidebar="ToggleMenu" MenuColapsado="@menuColapsado" />
+        </div>
+    }
 
     <main>
         <div class="top-row px-4 auth-bar d-flex justify-content-between align-items-center">
@@ -40,6 +43,45 @@
 @code {
     // Variable para controlar el estado del menú
     private bool menuColapsado = false;
+    private bool verifyTerms = true;
+    [Inject] private SistemaAduanero.Web.Services.TermsStateService TermsState { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NavManager.LocationChanged += OnLocationChanged;
+        await VerificarTerminos();
+    }
+
+    private async void OnLocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        await VerificarTerminos();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task VerificarTerminos()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            if (!NavManager.Uri.Contains("/terminos") && 
+                !NavManager.Uri.Contains("/login") && 
+                !NavManager.Uri.Contains("/recuperar-password") && 
+                !NavManager.Uri.Contains("/restablecer-password"))
+            {
+                if (!TermsState.HasAcceptedTerms)
+                {
+                    NavManager.NavigateTo("/terminos");
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= OnLocationChanged;
+    }
 
     private void ToggleMenu()
     {
@@ -51,5 +93,11 @@
         var customAuthProvider = (CustomAuthStateProvider)AuthStateProvider;
         await customAuthProvider.CerrarSesion();
         NavManager.NavigateTo("/login", forceLoad: true);
+    }
+    
+    // Clase auxiliar para la respuesta del endpoint
+    public class TerminosResponse
+    {
+        public bool Aceptado { get; set; }
     }
 }
