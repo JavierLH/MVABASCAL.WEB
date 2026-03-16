@@ -25,7 +25,7 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 <button type="button" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2" @onclick="AbrirCatalogo">
-                                    <i class="bi bi-journal-plus"></i> <span class="d-none d-sm-inline">Mostrar Catálogo</span>
+                                    <i class="bi bi-journal-plus"></i> <span class="d-none d-sm-inline">Agregar nuevo archivo al expediente</span>
                                 </button>
                                 <button type="button" class="btn-close btn-close-white" @onclick="Cerrar"></button>
                             </div>
@@ -133,11 +133,6 @@
                                                     </div>
                                                 }
 
-                                                <button type="button" class="btn btn-outline-danger btn-sm w-5 py-0 mt-0" style="font-size: 0.70rem; height: 24px;"
-                                                        @onclick="@(() => EliminarRegistroBoton(doc))"
-                                                        disabled="@(SoloLectura)">
-                                                    <i class="bi bi-trash"></i> Eliminar Documento
-                                                </button>
                                             </div>
 
 
@@ -190,6 +185,13 @@
                                                     
                                                 </div>
                                             </div>
+
+
+                                            <button type="button" class="btn btn-outline-danger btn-sm w-5 py-0 mt-0" style="font-size: 0.70rem; height: 24px;"
+                                                    @onclick="@(() => EliminarRegistroBoton(doc))"
+                                                    disabled="@(SoloLectura)">
+                                                <i class="bi bi-trash"></i> Eliminar Vucem
+                                            </button>
 
                                         </div>
                                     </div>
@@ -382,6 +384,9 @@
         }
 
         string mensaje = $"Enviando documento a VUCEM...\n\nArchivo: {doc.NombreDocumento}\ne-Document: {doc.Edocument ?? "N/A"}\nN. Operación: {doc.NOperacion ?? "N/A"}";
+        
+
+        
         await JS.InvokeVoidAsync("alert", mensaje);
     }
 
