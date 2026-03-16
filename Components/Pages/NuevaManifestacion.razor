@@ -347,55 +347,60 @@
         
     </div>
     @* === inicio === *@
-    <div class="card shadow-sm border-0 mt-4 bg-primary bg-opacity-10">
-        <div class="card-body d-flex justify-content-between align-items-center p-4">
+    @if (Id.HasValue)
+    {
+        <div class="card shadow-sm border-0 mt-4 bg-primary bg-opacity-10">
+            <div class="card-body d-flex justify-content-between align-items-center p-4">
 
-            <div class="d-flex align-items-center gap-3">
-                <div class="bg-white p-3 rounded-circle shadow-sm text-primary">
-                    <i class="bi bi-folder2-open fs-3"></i>
-                </div>
-                <div>
-                    <h6 class="fw-bold text-uppercase mb-1 text-primary">Expediente Digital</h6>
-                    <div class="d-flex gap-3 small text-muted">
-                        <span><i class="bi bi-file-earmark-check me-1"></i> @DocumentosCargados / @DocumentosTotales Cargados</span>
-                        <span><i class="bi bi-slash-circle me-1"></i> @DocumentosExentos Exentos</span>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-white p-3 rounded-circle shadow-sm text-primary">
+                        <i class="bi bi-folder2-open fs-3"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-uppercase mb-1 text-primary">Expediente Digital</h6>
+                        <div class="d-flex gap-3 small text-muted">
+                            <span><i class="bi bi-file-earmark-check me-1"></i> @DocumentosCargados / @DocumentosTotales Cargados</span>
+                            <span><i class="bi bi-slash-circle me-1"></i> @DocumentosExentos Exentos</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex-grow-1 mx-5">
-                <div class="d-flex justify-content-between small fw-bold mb-1">
-                    <span>Progreso</span>
-                    <span>@ProgresoExpediente%</span>
+                <div class="flex-grow-1 mx-5">
+                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                        <span>Progreso</span>
+                        <span>@ProgresoExpediente%</span>
+                    </div>
+                    <div class="progress shadow-sm" style="height: 10px;">
+                        <div class="progress-bar bg-primary" role="progressbar"
+                             style="width: @(ProgresoExpediente)%;"></div>
+                    </div>
                 </div>
-                <div class="progress shadow-sm" style="height: 10px;">
-                    <div class="progress-bar bg-primary" role="progressbar"
-                         style="width: @(ProgresoExpediente)%;"></div>
-                </div>
-            </div>
 
-            <button class="btn btn-primary fw-bold shadow-sm px-4" @onclick="() => mostrarModalDocumentos = true">
-                <i class="bi bi-gear-fill me-2"></i> GESTIONAR
-            </button>
+                <button class="btn btn-primary fw-bold shadow-sm px-4" @onclick="() => mostrarModalDocumentos = true">
+                    <i class="bi bi-gear-fill me-2"></i> GESTIONAR
+                </button>
+            </div>
         </div>
-    </div>
 
-    <SistemaAduanero.Web.Components.Partials.ExpedienteDigitalModal
-    Pedimento="@manifestacion.ReferenciaAdmin"
-    Referencia="@manifestacion.Referencia"
-    Cliente="@(manifestacion.Cliente?.RazonSocial ?? "Sin Cliente")"
+        <SistemaAduanero.Web.Components.Partials.ExpedienteDigitalModal
+        Pedimento="@manifestacion.ReferenciaAdmin"
+        Referencia="@manifestacion.Referencia"
+        Cliente="@(manifestacion.Cliente?.RazonSocial ?? "Sin Cliente")"
 
-    @bind-Mostrar="mostrarModalDocumentos"
-    Documentos="manifestacion.Documentos"
-    Notas="manifestacion.HistorialNotas"
-    SoloLectura="@(manifestacion.EstadoEnvio == "COMPLETO")"
-    EsAA="@(!bloquearCamposAA)"
+        @bind-Mostrar="mostrarModalDocumentos"
+        Documentos="manifestacion.Documentos"
+        Notas="manifestacion.HistorialNotas"
+        SoloLectura="@(manifestacion.EstadoEnvio == "COMPLETO")"
+        EsAA="@(!bloquearCamposAA)"
 
-    OnSubirArchivo="SubirArchivoDesdeComponente"
-    OnEliminarArchivo="EliminarArchivoDesdeComponente"
-    DocumentoModificado="GuardarEstadoDocumento"
-    OnEnviarMensaje="EnviarNotaDesdeComponente"
-   />
+        OnSubirArchivo="SubirArchivoDesdeComponente"
+        OnEliminarArchivo="EliminarArchivoDesdeComponente"
+        OnEliminarRegistro="EliminarRegistroDesdeComponente"
+        OnAgregarDesdeCatalogo="AgregarDocumentoDesdeCatalogo"
+        DocumentoModificado="GuardarEstadoDocumento"
+        OnEnviarMensaje="EnviarNotaDesdeComponente"
+       />
+    }
     
     @* === fin === *@
 </div>
@@ -2079,7 +2084,7 @@
             using var content = new MultipartFormDataContent();
 
             content.Add(new StringContent(Id.Value.ToString()), "manifestacionId");
-            content.Add(new StringContent(data.Doc.IdDocumento.ToString()), "catalogoId");
+            content.Add(new StringContent(data.Doc.AnexoId.ToString()), "anexoId");
 
             var fileContent = new StreamContent(archivo.OpenReadStream(maxFileSize));
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(archivo.ContentType);
@@ -2141,9 +2146,8 @@
                     doc.UrlDescarga = null;
                     doc.FechaCarga = null;
                     doc.Revisado = false;
-                    // OJO: Si borramos el archivo, ¿mantenemos el AnexoId?
-                    // Según el Controller (Delete), borramos el registro. Así que AnexoId vuelve a 0.
-                    doc.AnexoId = 0;
+                    // OJO: Ya no regresamos a 0 porque la fila maestra en ManifestacionEdocuments se queda existiendo.
+                    // doc.AnexoId = 0;
 
                     await MostrarToast("Archivo eliminado.", SweetAlertIcon.Success);
                 }
@@ -2156,6 +2160,73 @@
             {
                 await MostrarToast("Error: " + ex.Message, SweetAlertIcon.Error);
             }
+        }
+    }
+
+    private async Task EliminarRegistroDesdeComponente(DocumentoExpedienteDto doc)
+    {
+        if (doc.AnexoId == 0) return; 
+
+        var confirm = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Eliminar Documento Completo?",
+            Text = "Esta acción eliminará el registro de la base de datos.",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, eliminar"
+        });
+
+        if (confirm.IsConfirmed)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/Documentos/{doc.AnexoId}/registro");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Remueve de la lista visual
+                    manifestacion.Documentos.Remove(doc);
+                    await MostrarToast("Registro de documento eliminado.", SweetAlertIcon.Success);
+                }
+                else
+                {
+                    await MostrarToast("No se pudo eliminar el registro.", SweetAlertIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                await MostrarToast("Error: " + ex.Message, SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private async Task AgregarDocumentoDesdeCatalogo(DocumentoExpedienteDto docDelCatalogo)
+    {
+        if (!Id.HasValue) 
+        {
+            await MostrarToast("Guarda la manifestación antes de agregar documentos.", SweetAlertIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            // Creamos un registro vacío en BD para este expediente y catálogo
+            var response = await Http.PostAsJsonAsync($"api/Documentos/crear-vacio?manifestacionId={Id.Value}", docDelCatalogo);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await MostrarToast("Documento agregado al expediente.", SweetAlertIcon.Success);
+                // Refrescamos visualmente para traerlo de BD con su AnexoId real
+                await CargarExpediente(Id.Value);
+            }
+            else
+            {
+                await MostrarToast("No se pudo agregar el documento.", SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast("Error de conexión: " + ex.Message, SweetAlertIcon.Error);
         }
     }
 
@@ -2190,19 +2261,8 @@
         {
             if (doc.AnexoId > 0)
             {
-                // Si ya existe el registro (porque tiene archivo o fue creado vacio), actualizamos
+                // Como es tabla maestra, siempre va a existir con un AnexoId.
                 await Http.PutAsJsonAsync($"api/Documentos/{doc.AnexoId}/estado", doc);
-            }
-            else
-            {
-                // Si NO existe registro (es un hueco vacío) y lo estamos exentando,
-                // debemos crear el registro en BD para guardar ese "Exento = true"
-                var response = await Http.PostAsJsonAsync($"api/Documentos/crear-vacio?manifestacionId={Id.Value}", doc);
-                if (response.IsSuccessStatusCode)
-                {
-                    var nuevoId = await response.Content.ReadFromJsonAsync<int>();
-                    doc.AnexoId = nuevoId;
-                }
             }
         }
         catch (Exception ex)

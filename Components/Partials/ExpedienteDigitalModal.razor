@@ -1,5 +1,6 @@
 @using SistemaAduanero.Shared.DTOs
 @inject IJSRuntime JS
+@inject System.Net.Http.HttpClient Http
 
 @if (Mostrar)
 {
@@ -22,7 +23,12 @@
                                     <span class="small fw-bold text-white" style="font-size: 0.7rem;">@Progreso%</span>
                                 </div>
                             </div>
-                            <button type="button" class="btn-close btn-close-white" @onclick="Cerrar"></button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2" @onclick="AbrirCatalogo">
+                                    <i class="bi bi-journal-plus"></i> <span class="d-none d-sm-inline">Mostrar Catálogo</span>
+                                </button>
+                                <button type="button" class="btn-close btn-close-white" @onclick="Cerrar"></button>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-4 small text-white text-opacity-75 bg-dark bg-opacity-10 rounded px-3 py-1" style="font-size: 0.85rem;">
@@ -126,8 +132,16 @@
                                                         </button>
                                                     </div>
                                                 }
+
+                                                <button type="button" class="btn btn-outline-danger btn-sm w-5 py-0 mt-0" style="font-size: 0.70rem; height: 24px;"
+                                                        @onclick="@(() => EliminarRegistroBoton(doc))"
+                                                        disabled="@(SoloLectura)">
+                                                    <i class="bi bi-trash"></i> Eliminar Documento
+                                                </button>
                                             </div>
 
+
+                                            
                                             <div class="d-flex justify-content-center gap-3 border-start ps-3" style="flex: 1;">
 
                                                 <div class="d-flex flex-column align-items-center">
@@ -144,6 +158,8 @@
                                                         @(doc.Revisado ? "VALIDADO" : "Revisar")
                                                     </small>
                                                 </div>
+
+                                                
 
                                                 <div class="d-flex flex-column align-items-center">
                                                     <div class="form-check form-switch m-0">
@@ -171,6 +187,7 @@
                                                             disabled="@(SoloLectura || string.IsNullOrEmpty(doc.NombreArchivo))">
                                                         <i class="bi bi-send"></i> Enviar VUCEM
                                                     </button>
+                                                    
                                                 </div>
                                             </div>
 
@@ -235,6 +252,49 @@
     </div>
 }
 
+@if (mostrarModalCatalogo)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.6);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-secondary text-white py-2">
+                    <h5 class="modal-title fs-6"><i class="bi bi-journals me-2"></i>Catálogo de Documentos</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => mostrarModalCatalogo = false"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush">
+                        @if (catalogoDisponible.Any())
+                        {
+                            @foreach (var doc in catalogoDisponible)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-3 py-2 text-sm">
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">@doc.NombreDocumento</div>
+                                        @if (doc.EsObligatorioCatalogo)
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.6rem;">REQUERIDO</span>
+                                        }
+                                    </div>
+                                    <button class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.75rem;" @onclick="() => AgregarDocumentoCat(doc)">
+                                        <i class="bi bi-plus-lg"></i> Agregar
+                                    </button>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="p-4 text-center text-muted">
+                                <i class="bi bi-check-circle fs-2"></i>
+                                <p class="mt-2 mb-0" style="font-size: 0.85rem;">Todos los documentos del catálogo ya están agregados a este expediente.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public bool Mostrar { get; set; }
     [Parameter] public EventCallback<bool> MostrarChanged { get; set; }
@@ -245,6 +305,8 @@
 
     [Parameter] public EventCallback<(DocumentoExpedienteDto Doc, InputFileChangeEventArgs Args)> OnSubirArchivo { get; set; }
     [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarArchivo { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarRegistro { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnAgregarDesdeCatalogo { get; set; }
     [Parameter] public EventCallback<DocumentoExpedienteDto> DocumentoModificado { get; set; }
     //[Parameter] public EventCallback DocumentoModificado { get; set; }
     [Parameter] public EventCallback<string> OnEnviarMensaje { get; set; }
@@ -272,8 +334,36 @@
         await MostrarChanged.InvokeAsync(Mostrar);
     }
 
+    private bool mostrarModalCatalogo = false;
+    private List<DocumentoExpedienteDto> catalogoDisponible = new();
+
+    private async Task AbrirCatalogo()
+    {
+        try
+        {
+            var catalogoCompleto = await Http.GetFromJsonAsync<List<DocumentoExpedienteDto>>("api/Catalogos/documentos-requeridos");
+            if (catalogoCompleto != null)
+            {
+                // El usuario pidió que se muestren TODOS los del catálogo, incluso si ya están agregados arriba.
+                catalogoDisponible = catalogoCompleto.ToList();
+            }
+            mostrarModalCatalogo = true;
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "Error al cargar catálogo: " + ex.Message);
+        }
+    }
+
+    private async Task AgregarDocumentoCat(DocumentoExpedienteDto doc)
+    {
+        await OnAgregarDesdeCatalogo.InvokeAsync(doc);
+        mostrarModalCatalogo = false;
+    }
+
     private async Task Subir(InputFileChangeEventArgs e, DocumentoExpedienteDto doc) => await OnSubirArchivo.InvokeAsync((doc, e));
     private async Task Eliminar(DocumentoExpedienteDto doc) => await OnEliminarArchivo.InvokeAsync(doc);
+    private async Task EliminarRegistroBoton(DocumentoExpedienteDto doc) => await OnEliminarRegistro.InvokeAsync(doc);
 
     private async Task NotificarCambio(DocumentoExpedienteDto doc, string tipo, bool valor)
     {
