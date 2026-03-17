@@ -1,8 +1,9 @@
-﻿using Blazored.LocalStorage;
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using SistemaAduanero.Web.Auth;
 using SistemaAduanero.Web.Components;
+using SistemaAduanero.Web.Services;
 using CurrieTechnologies.Razor.SweetAlert2;
 
 
@@ -33,6 +34,17 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
     }); builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+
+
+builder.Services.AddHttpClient("ApiClient", client =>
+{
+    client.BaseAddress = new Uri(apiUrl);
+});
+
+// EdocumentPendienteService: singleton para poder inyectarlo en componentes Blazor + hosted para el background loop
+builder.Services.AddSingleton<EdocumentPendienteService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EdocumentPendienteService>());
 
 builder.Services.AddSweetAlert2();
 

@@ -1,6 +1,10 @@
+@using SistemaAduanero.API.Dto
 @using SistemaAduanero.Shared.DTOs
+@using SistemaAduanero.Web.Services
 @inject IJSRuntime JS
 @inject System.Net.Http.HttpClient Http
+@inject EdocumentPendienteService EdocService
+@implements IDisposable
 
 @if (Mostrar)
 {
@@ -305,6 +309,22 @@
     [Parameter] public bool SoloLectura { get; set; } = false;
     [Parameter] public bool EsAA { get; set; } = false;
 
+    private bool _callbacksRegistrados = false;
+
+    protected override void OnParametersSet()
+    {
+        if (Mostrar && !_callbacksRegistrados)
+        {
+            RegistrarCallbacks();
+            _callbacksRegistrados = true;
+        }
+        else if (!Mostrar && _callbacksRegistrados)
+        {
+            DesregistrarCallbacks();
+            _callbacksRegistrados = false;
+        }
+    }
+
     [Parameter] public EventCallback<(DocumentoExpedienteDto Doc, InputFileChangeEventArgs Args)> OnSubirArchivo { get; set; }
     [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarArchivo { get; set; }
     [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarRegistro { get; set; }
@@ -332,9 +352,35 @@
 
     private async Task Cerrar()
     {
+        DesregistrarCallbacks();
         Mostrar = false;
         await MostrarChanged.InvokeAsync(Mostrar);
     }
+
+    // Registra callbacks para todos los docs que tienen NOperacion pero sin Edocument
+    private void RegistrarCallbacks()
+    {
+        foreach (var doc in Documentos)
+        {
+            if (!string.IsNullOrEmpty(doc.NOperacion) && string.IsNullOrEmpty(doc.Edocument))
+            {
+                var docCapturado = doc; // captura para el closure
+                EdocService.RegistrarCallback(doc.AnexoId, async (edoc) =>
+                {
+                    docCapturado.Edocument = edoc;
+                    await InvokeAsync(StateHasChanged);
+                });
+            }
+        }
+    }
+
+    private void DesregistrarCallbacks()
+    {
+        foreach (var doc in Documentos)
+            EdocService.DesregistrarCallback(doc.AnexoId);
+    }
+
+    public void Dispose() => DesregistrarCallbacks();
 
     private bool mostrarModalCatalogo = false;
     private List<DocumentoExpedienteDto> catalogoDisponible = new();
@@ -377,17 +423,54 @@
 
     private async Task EnviarAVucem(DocumentoExpedienteDto doc)
     {
-        if (string.IsNullOrEmpty(doc.NombreArchivo))
+        try
         {
-            await JS.InvokeVoidAsync("alert", "Error: No hay ningún archivo cargado para enviar a VUCEM.");
-            return;
+            if (string.IsNullOrEmpty(doc.NombreArchivo))
+            {
+                await JS.InvokeVoidAsync("alert", "Error: No hay ningún archivo cargado.");
+                return;
+            }
+
+            var resEjecutar = await Http.GetFromJsonAsync<RespuestaEjecutarDto>("api/APIVucem/ejecutar");
+
+            if (resEjecutar != null && !resEjecutar.respuestaBaseField.tieneErrorField)
+            {
+                var nOperacion = resEjecutar.acuseField.numeroOperacionField.ToString();
+
+                // Guardar el N. Operación en la base de datos
+                var response = await Http.PutAsJsonAsync($"api/Documentos/{doc.AnexoId}/noperacion", nOperacion);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Actualizar el objeto en memoria para reflejar en la UI
+                    doc.NOperacion = nOperacion;
+                    StateHasChanged();
+
+
+
+                    string mensaje = $"¡Éxito VUCEM!\n\n" +
+                                     $"Estado: {resEjecutar.acuseField.mensajeField}\n" +
+                                     $"N. Operación: {nOperacion}";
+                    await JS.InvokeVoidAsync("alert", mensaje);
+                }
+                else
+                {
+                    // La llamada VUCEM fue exitosa pero no se pudo guardar en BD
+                    string mensaje = $"¡Éxito VUCEM! pero no se pudo guardar en BD.\n\n" +
+                                     $"N. Operación: {nOperacion}\n" +
+                                     $"Error al guardar: {response.StatusCode}";
+                    await JS.InvokeVoidAsync("alert", mensaje);
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", $"Error VUCEM: {resEjecutar?.respuestaBaseField?.errorField}");
+            }
         }
-
-        string mensaje = $"Enviando documento a VUCEM...\n\nArchivo: {doc.NombreDocumento}\ne-Document: {doc.Edocument ?? "N/A"}\nN. Operación: {doc.NOperacion ?? "N/A"}";
-        
-
-        
-        await JS.InvokeVoidAsync("alert", mensaje);
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error de conexión: {ex.Message}");
+        }
     }
 
     private async Task Enviar()
