@@ -1,0 +1,428 @@
+﻿@page "/sellos"
+@inject HttpClient Http
+@inject SweetAlertService Swal
+@using SistemaAduanero.Shared.DTOs
+@using System.Net.Http.Headers
+@attribute [Authorize]
+
+<div class="container-fluid mt-4">
+    @* === SECCIÓN 1: CABECERA === *@
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-shield-lock-fill"></i>
+                <h6 class="mb-0 fw-bold text-uppercase">Catálogo de Sellos Digitales</h6>
+            </div>
+            <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="AbrirModalNuevo">
+                <i class="bi bi-plus-lg"></i> NUEVO SELLO
+            </button>
+        </div>
+        
+        @* Barra de Búsqueda *@
+        <div class="card-body bg-light border-bottom">
+            <div class="row g-2">
+                <div class="col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0"
+                               placeholder="Buscar por RFC o Razón Social..."
+                               @bind="filtros.BusquedaTexto"
+                               @bind:event="oninput"
+                               @onkeyup="@(e => { if (e.Key == "Enter") CargarSellos(1); })" />
+                        <button class="btn btn-primary fw-bold" @onclick="() => CargarSellos(1)">BUSCAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* === SECCIÓN 2: TABLA DE DATOS === *@
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0 small align-middle">
+                    <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem;">
+                        <tr>
+                            <th class="ps-3 py-2">Cliente (RFC)</th>
+                            <th class="py-2">Vencimiento</th>
+                            <th class="py-2">Estado</th>
+                            <th class="text-center py-2">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (respuesta == null)
+                        {
+                            <tr><td colspan="4" class="text-center py-4"><div class="spinner-border text-primary spinner-border-sm"></div> Cargando...</td></tr>
+                        }
+                        else if (respuesta.Elementos.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center py-4 text-muted">No se encontraron sellos.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var sello in respuesta.Elementos)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold text-primary">@sello.RFC</td>
+                                    <td>@sello.FechaVencimiento?.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @if (sello.Activo)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => Editar(sello)">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => Eliminar(sello)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        @* === SECCIÓN 3: PAGINADOR === *@
+        @if (respuesta != null && respuesta.TotalPaginas >= 1)
+        {
+            <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+                <small class="text-muted">Total: <strong>@respuesta.TotalRegistros</strong> registros</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(filtros.Pagina == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CargarSellos(filtros.Pagina - 1)">Anterior</button>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link bg-light text-dark border-0 mx-2">Pag. @filtros.Pagina de @respuesta.TotalPaginas</span>
+                        </li>
+                        <li class="page-item @(filtros.Pagina >= respuesta.TotalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => CargarSellos(filtros.Pagina + 1)">Siguiente</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+@* === MODAL DE REGISTRO / EDICIÓN === *@
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header @(selloForm.Id == 0 ? "bg-primary" : "bg-warning text-dark") text-white">
+                    <h5 class="modal-title fs-6 text-uppercase fw-bold">
+                        @if (selloForm.Id == 0)
+                        {
+                            <i class="bi bi-key-fill"></i> <span>Registrar Nuevo Sello</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-pencil-square"></i> <span class="text-dark">Editar Sello Digital</span>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close @(selloForm.Id == 0 ? "btn-close-white" : "")" @onclick="CerrarModal"></button>
+                </div>
+
+                <div class="modal-body bg-light">
+                    
+                    @* MENSAJE DE SEGURIDAD (Solo visible al editar) *@
+                    @if (selloForm.Id > 0)
+                    {
+                        <div class="alert alert-info py-2 small mb-3 border-0 shadow-sm d-flex align-items-center">
+                            <i class="bi bi-shield-check fs-4 me-3 text-info"></i>
+                            <div>
+                                <strong>Modo Edición Seguro:</strong> Por protección, los archivos <b>.cer / .key</b> y las <b>contraseñas</b> actuales están ocultos. <br />
+                                <i>Si dejas estos campos en blanco, el sistema conservará los datos que ya están guardados.</i>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="card border-0 shadow-sm p-3 mb-3">
+                        <h6 class="text-primary fw-bold text-uppercase border-bottom pb-2 mb-3 small">Asignación y Archivos</h6>
+                        <div class="row g-3">
+                            
+                            @* Selector de Cliente *@
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold text-muted">CLIENTE *</label>
+                                <select class="form-select form-select-sm" @bind="selloForm.ClienteId" disabled="@(selloForm.Id > 0)">
+                                    <option value="0">-- Seleccione un Cliente --</option>
+                                    @if (clientes != null)
+                                    {
+                                        @foreach (var c in clientes)
+                                        {
+                                            <option value="@c.ClienteId">@c.RFC - @c.RazonSocial</option>
+                                        }
+                                    }
+                                </select>
+                                @if(selloForm.Id > 0) { <div class="form-text" style="font-size: 0.7rem;">El cliente no se puede cambiar en edición.</div> }
+                            </div>
+
+                            @* Archivo .CER *@
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">CERTIFICADO (.cer) @(selloForm.Id == 0 ? "*" : "")</label>
+                                <InputFile class="form-control form-control-sm" OnChange="CargarCer" accept=".cer" />
+                                @if(selloForm.Id > 0) { <div class="form-text text-success" style="font-size: 0.7rem;"><i class="bi bi-check-circle"></i> Archivo guardado. Sube uno nuevo solo para reemplazar.</div> }
+                            </div>
+
+                            @* Archivo .KEY *@
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">LLAVE PRIVADA (.key) @(selloForm.Id == 0 ? "*" : "")</label>
+                                <InputFile class="form-control form-control-sm" OnChange="CargarKey" accept=".key" />
+                                @if(selloForm.Id > 0) { <div class="form-text text-success" style="font-size: 0.7rem;"><i class="bi bi-check-circle"></i> Archivo guardado. Sube uno nuevo solo para reemplazar.</div> }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm p-3 mb-3">
+                        <h6 class="text-primary fw-bold text-uppercase border-bottom pb-2 mb-3 small">Seguridad y Vigencia</h6>
+                        <div class="row g-3">
+                            
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">CONTRASEÑA .KEY @(selloForm.Id == 0 ? "*" : "")</label>
+                                <input type="password" class="form-control form-control-sm" @bind="selloForm.PasswordKey" placeholder="@(selloForm.Id > 0 ? "•••••••• (Oculta)" : "Escribe la contraseña")" />
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">PASSWORD VUCEM @(selloForm.Id == 0 ? "*" : "")</label>
+                                <input type="password" class="form-control form-control-sm" @bind="selloForm.PasswordVucem" placeholder="@(selloForm.Id > 0 ? "•••••••• (Oculto)" : "Escribe el password")" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">VENCIMIENTO *</label>
+                                <input type="date" class="form-control form-control-sm" @bind="selloForm.FechaVencimiento" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModal">Cancelar</button>
+                    <button type="button" class="btn @(selloForm.Id == 0 ? "btn-primary" : "btn-warning") btn-sm fw-bold px-4" @onclick="GuardarSello" disabled="@guardando">
+                        @if(guardando) { 
+                            <span class="spinner-border spinner-border-sm"></span> 
+                        }
+                        else 
+                        { 
+                            <i class="bi @(selloForm.Id == 0 ? "bi-save" : "bi-arrow-clockwise")"></i> 
+                            <span>@(selloForm.Id == 0 ? "GUARDAR SELLO" : "ACTUALIZAR SELLO")</span> 
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool mostrarModal = false;
+    private bool guardando = false;
+
+    // Listas para las tablas y combos
+    private PaginacionResponseDto<SelloListadoDto>? respuesta;
+    private PaginacionRequestDto filtros = new PaginacionRequestDto { RegistrosPorPagina = 10 };
+    private List<ClienteDto> clientes = new();
+
+    // Modelo del formulario
+    private SelloFormDto selloForm = new() { FechaVencimiento = DateTime.Now.AddYears(4) };
+
+    // Variables para almacenar los archivos seleccionados temporalmente
+    private IBrowserFile? archivoCer;
+    private IBrowserFile? archivoKey;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Cargar lista de clientes para el combo
+        var resClientes = await Http.GetFromJsonAsync<PaginacionResponseDto<ClienteDto>>("api/clientes?Pagina=1&RegistrosPorPagina=1000");
+        if (resClientes != null) clientes = resClientes.Elementos;
+
+        // 2. ¡Llenar la tabla de Sellos paginada!
+        await CargarSellos(1);
+    }
+
+    private async Task CargarSellos(int pagina)
+    {
+        try
+        {
+            filtros.Pagina = pagina;
+            var url = $"api/Sellos?Pagina={filtros.Pagina}&RegistrosPorPagina={filtros.RegistrosPorPagina}";
+            if (!string.IsNullOrEmpty(filtros.BusquedaTexto)) url += $"&BusquedaTexto={filtros.BusquedaTexto}";
+
+            respuesta = await Http.GetFromJsonAsync<PaginacionResponseDto<SelloListadoDto>>(url);
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast($"Error al cargar: {ex.Message}", SweetAlertIcon.Error);
+        }
+    }
+
+    private void AbrirModalNuevo()
+    {
+        selloForm = new() { FechaVencimiento = DateTime.Now.AddYears(4) };
+        archivoCer = null;
+        archivoKey = null;
+        mostrarModal = true;
+    }
+
+    private void CerrarModal() => mostrarModal = false;
+
+    // Eventos cuando el usuario selecciona un archivo
+    private void CargarCer(InputFileChangeEventArgs e) => archivoCer = e.File;
+    private void CargarKey(InputFileChangeEventArgs e) => archivoKey = e.File;
+
+    private async Task GuardarSello()
+    {
+        // Validaciones dinámicas (Si es nuevo, todo es obligatorio. Si es edición, son opcionales)
+        if (selloForm.ClienteId == 0) { await MostrarToast("Selecciona un cliente", SweetAlertIcon.Warning); return; }
+
+        if (selloForm.Id == 0) // Es un sello NUEVO
+        {
+            if (archivoCer == null || archivoKey == null) { await MostrarToast("Faltan archivos .cer o .key", SweetAlertIcon.Warning); return; }
+            if (string.IsNullOrWhiteSpace(selloForm.PasswordKey)) { await MostrarToast("Contraseña Key obligatoria", SweetAlertIcon.Warning); return; }
+            if (string.IsNullOrWhiteSpace(selloForm.PasswordVucem)) { await MostrarToast("Password Vucem obligatorio", SweetAlertIcon.Warning); return; }
+        }
+
+        guardando = true;
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            
+            content.Add(new StringContent(selloForm.ClienteId.ToString()), "ClienteId");
+            content.Add(new StringContent(selloForm.FechaVencimiento?.ToString("yyyy-MM-dd")), "FechaVencimiento");
+            content.Add(new StringContent(selloForm.Activo.ToString()), "Activo");
+
+            // Solo agregamos las contraseñas si el usuario escribió algo
+            if (!string.IsNullOrWhiteSpace(selloForm.PasswordKey))
+                content.Add(new StringContent(selloForm.PasswordKey), "PasswordKey");
+                
+            if (!string.IsNullOrWhiteSpace(selloForm.PasswordVucem))
+                content.Add(new StringContent(selloForm.PasswordVucem), "PasswordVucem");
+
+            // Solo agregamos el .CER si el usuario seleccionó uno nuevo
+            if (archivoCer != null)
+            {
+                var cerContent = new StreamContent(archivoCer.OpenReadStream(maxAllowedSize: 1024 * 1024 * 2));
+                cerContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                content.Add(cerContent, "ArchivoCer", archivoCer.Name);
+            }
+
+            // Solo agregamos el .KEY si el usuario seleccionó uno nuevo
+            if (archivoKey != null)
+            {
+                var keyContent = new StreamContent(archivoKey.OpenReadStream(maxAllowedSize: 1024 * 1024 * 2));
+                keyContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                content.Add(keyContent, "ArchivoKey", archivoKey.Name);
+            }
+
+            HttpResponseMessage response;
+            if (selloForm.Id > 0)
+                response = await Http.PutAsync($"api/Sellos/{selloForm.Id}", content); // ACTUALIZAR
+            else
+                response = await Http.PostAsync("api/Sellos/registrar", content); // CREAR
+
+            if (response.IsSuccessStatusCode)
+            {
+                await MostrarToast("Guardado correctamente", SweetAlertIcon.Success);
+                CerrarModal();
+                
+                if (selloForm.Id == 0) 
+                {
+                    filtros.BusquedaTexto = ""; 
+                    await CargarSellos(1);
+                }
+                else 
+                {
+                    await CargarSellos(filtros.Pagina);
+                }
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                await MostrarToast($"Error: {error}", SweetAlertIcon.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await MostrarToast($"Error interno: {ex.Message}", SweetAlertIcon.Error);
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void Editar(SelloListadoDto item)
+    {
+        selloForm = new SelloFormDto
+        {
+            Id = item.Id,
+            ClienteId = item.ClienteId,
+            FechaVencimiento = item.FechaVencimiento,
+            Activo = item.Activo,
+            PasswordKey = "",   // Se dejan vacías por seguridad
+            PasswordVucem = ""
+        };
+        archivoCer = null;
+        archivoKey = null;
+        mostrarModal = true;
+    }
+
+    private async Task Eliminar(SelloListadoDto item)
+    {
+        var result = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Eliminar Sello?",
+            Text = $"Se eliminarán los certificados de: {item.RFC}",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, eliminar",
+            CancelButtonText = "Cancelar"
+        });
+
+        if (result.IsConfirmed)
+        {
+            var response = await Http.DeleteAsync($"api/Sellos/{item.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                await MostrarToast("Eliminado correctamente", SweetAlertIcon.Success);
+                await CargarSellos(filtros.Pagina);
+            }
+            else
+            {
+                await MostrarToast("No se pudo eliminar", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private async Task MostrarToast(string mensaje, SweetAlertIcon icono)
+    {
+        await Swal.FireAsync(new SweetAlertOptions
+        {
+            Toast = true,
+            Position = SweetAlertPosition.TopEnd,
+            ShowConfirmButton = false,
+            Timer = 2500,
+            Icon = icono,
+            Title = mensaje
+        });
+    }
+
+    public class SelloFormDto
+    {
+        public int Id { get; set; } 
+        public int ClienteId { get; set; }
+        public string PasswordKey { get; set; } = "";
+        public string PasswordVucem { get; set; } = "";
+        public DateTime? FechaVencimiento { get; set; }
+        public bool Activo { get; set; } = true;
+    }
+}
