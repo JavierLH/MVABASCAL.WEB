@@ -181,8 +181,8 @@
                                                 <input type="text" class="form-control form-control-sm text-center" placeholder="e-Document" value="@doc.Edocument" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
                                                 <input type="text" class="form-control form-control-sm text-center" placeholder="N. Operación" value="@doc.NOperacion" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
                                                 <div class="mt-2">
-                                                    <button type="button" class="btn btn-primary btn-sm w-100 py-0" style="font-size: 0.70rem; height: 24px;" 
-                                                            @onclick="@(() => EnviarAVucem(doc))" 
+                                                    <button type="button" class="btn btn-primary btn-sm w-100 py-0" style="font-size: 0.70rem; height: 24px;"
+                                                            @onclick="@(() => OnDigitalizarVucem.InvokeAsync(doc))"
                                                             disabled="@(SoloLectura || string.IsNullOrEmpty(doc.NombreArchivo))">
                                                         <i class="bi bi-send"></i> Enviar VUCEM
                                                     </button>
@@ -332,6 +332,7 @@
     [Parameter] public EventCallback<DocumentoExpedienteDto> DocumentoModificado { get; set; }
     //[Parameter] public EventCallback DocumentoModificado { get; set; }
     [Parameter] public EventCallback<string> OnEnviarMensaje { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnDigitalizarVucem { get; set; }
     [Parameter] public string Pedimento { get; set; } = "";
     [Parameter] public string Referencia { get; set; } = "";
     [Parameter] public string Cliente { get; set; } = "";
@@ -421,57 +422,6 @@
         await DocumentoModificado.InvokeAsync(doc);
     }
 
-    private async Task EnviarAVucem(DocumentoExpedienteDto doc)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(doc.NombreArchivo))
-            {
-                await JS.InvokeVoidAsync("alert", "Error: No hay ningún archivo cargado.");
-                return;
-            }
-
-            var resEjecutar = await Http.GetFromJsonAsync<RespuestaEjecutarDto>("api/APIVucem/ejecutar");
-
-            if (resEjecutar != null && !resEjecutar.respuestaBaseField.tieneErrorField)
-            {
-                var nOperacion = resEjecutar.acuseField.numeroOperacionField.ToString();
-
-                // Guardar el N. Operación en la base de datos
-                var response = await Http.PutAsJsonAsync($"api/Documentos/{doc.AnexoId}/noperacion", nOperacion);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    // Actualizar el objeto en memoria para reflejar en la UI
-                    doc.NOperacion = nOperacion;
-                    StateHasChanged();
-
-
-
-                    string mensaje = $"¡Éxito VUCEM!\n\n" +
-                                     $"Estado: {resEjecutar.acuseField.mensajeField}\n" +
-                                     $"N. Operación: {nOperacion}";
-                    await JS.InvokeVoidAsync("alert", mensaje);
-                }
-                else
-                {
-                    // La llamada VUCEM fue exitosa pero no se pudo guardar en BD
-                    string mensaje = $"¡Éxito VUCEM! pero no se pudo guardar en BD.\n\n" +
-                                     $"N. Operación: {nOperacion}\n" +
-                                     $"Error al guardar: {response.StatusCode}";
-                    await JS.InvokeVoidAsync("alert", mensaje);
-                }
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("alert", $"Error VUCEM: {resEjecutar?.respuestaBaseField?.errorField}");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("alert", $"Error de conexión: {ex.Message}");
-        }
-    }
 
     private async Task Enviar()
     {
