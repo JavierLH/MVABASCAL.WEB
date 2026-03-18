@@ -1374,26 +1374,35 @@
                     OnClienteSeleccionado(clienteEncontrado.ClienteId);
 
                     // Totales globales
-                    if (decimal.TryParse(proformaExtraida.ValorAduana, out decimal valorAduana))
+                    if (!string.IsNullOrEmpty(proformaExtraida.ValorAduana) && decimal.TryParse(proformaExtraida.ValorAduana, out decimal valorAduana))
                     {
                         manifestacion.TotalValorAduana = valorAduana;
                     }
 
+                    if (!string.IsNullOrEmpty(proformaExtraida.PrecioPagado) && decimal.TryParse(proformaExtraida.PrecioPagado, out decimal precioPagado))
+                    {
+                        manifestacion.TotalPrecioPagado = precioPagado;
+                    }
+
                     if (proformaExtraida.Incrementales != null && proformaExtraida.Incrementales.Length > 0)
                     {
-                        decimal.TryParse(proformaExtraida.Incrementales[0], out decimal incFletes);
-                        decimal.TryParse(proformaExtraida.Incrementales[1], out decimal incSeguros);
-                        decimal.TryParse(proformaExtraida.Incrementales[2], out decimal incEmbalajes);
-                        decimal.TryParse(proformaExtraida.Incrementales[3], out decimal incOtros);
+                        decimal incFletes = 0, incSeguros = 0, incEmbalajes = 0, incOtros = 0;
+                        if (proformaExtraida.Incrementales.Length > 0) decimal.TryParse(proformaExtraida.Incrementales[0], out incFletes);
+                        if (proformaExtraida.Incrementales.Length > 1) decimal.TryParse(proformaExtraida.Incrementales[1], out incSeguros);
+                        if (proformaExtraida.Incrementales.Length > 2) decimal.TryParse(proformaExtraida.Incrementales[2], out incEmbalajes);
+                        if (proformaExtraida.Incrementales.Length > 3) decimal.TryParse(proformaExtraida.Incrementales[3], out incOtros);
+                        
                         manifestacion.TotalIncrementables = incFletes + incSeguros + incEmbalajes + incOtros;
                     }
 
                     if (proformaExtraida.Decrementables != null && proformaExtraida.Decrementables.Length > 0)
                     {
-                        decimal.TryParse(proformaExtraida.Decrementables[0], out decimal decFletes);
-                        decimal.TryParse(proformaExtraida.Decrementables[1], out decimal decSeguros);
-                        decimal.TryParse(proformaExtraida.Decrementables[2], out decimal decEmbalajes);
-                        decimal.TryParse(proformaExtraida.Decrementables[3], out decimal decOtros);
+                        decimal decFletes = 0, decSeguros = 0, decEmbalajes = 0, decOtros = 0;
+                        if (proformaExtraida.Decrementables.Length > 0) decimal.TryParse(proformaExtraida.Decrementables[0], out decFletes);
+                        if (proformaExtraida.Decrementables.Length > 1) decimal.TryParse(proformaExtraida.Decrementables[1], out decSeguros);
+                        if (proformaExtraida.Decrementables.Length > 2) decimal.TryParse(proformaExtraida.Decrementables[2], out decEmbalajes);
+                        if (proformaExtraida.Decrementables.Length > 3) decimal.TryParse(proformaExtraida.Decrementables[3], out decOtros);
+                        
                         manifestacion.TotalDecrementables = decFletes + decSeguros + decEmbalajes + decOtros;
                     }
 
@@ -1428,10 +1437,17 @@
 
                                 if (!string.IsNullOrWhiteSpace(anexo.MetodoValoracion))
                                 {
-                                    var metodoVal = ListaMetodosValoracion.FirstOrDefault(m => m.Clave?.Trim().ToUpper() == anexo.MetodoValoracion.Trim().ToUpper());
-                                    if (metodoVal != null)
+                                    if (int.TryParse(anexo.MetodoValoracion, out int index) && index > 0 && index <= ListaMetodosValoracion.Count)
                                     {
-                                        nuevoCove.MetodoValoracion = metodoVal.Clave;
+                                        nuevoCove.MetodoValoracion = ListaMetodosValoracion[index - 1].Clave;
+                                    }
+                                    else
+                                    {
+                                        var metodoVal = ListaMetodosValoracion.FirstOrDefault(m => m.Clave?.Trim().ToUpper() == anexo.MetodoValoracion.Trim().ToUpper());
+                                        if (metodoVal != null)
+                                        {
+                                            nuevoCove.MetodoValoracion = metodoVal.Clave;
+                                        }
                                     }
                                 }
 
