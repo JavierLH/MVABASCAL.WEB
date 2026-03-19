@@ -1341,6 +1341,40 @@
             {
                 proformaExtraida = await response.Content.ReadFromJsonAsync<PedimentoProformaDto>();
 
+                // ==========================================
+                // VALIDACIÓN 1: CLIENTE (RFC) DIFERENTE
+                // ==========================================
+                bool rfcDiferente = false;
+                if (clienteSeleccionadoId > 0 && manifestacion.Cliente != null)
+                {
+                    var rfcActual = manifestacion.Cliente.RFC?.Trim().ToUpper() ?? "";
+                    var rfcPdf = proformaExtraida.RfcImportador?.Trim().ToUpper() ?? "";
+                    
+                    if (!string.IsNullOrEmpty(rfcActual) && !string.IsNullOrEmpty(rfcPdf) && rfcActual != rfcPdf)
+                    {
+                        rfcDiferente = true;
+                    }
+                }
+
+                if (rfcDiferente)
+                {
+                    var confirmRfc = await Swal.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "Atención: RFC Diferente",
+                        Text = "El RFC extraído del documento no coincide con el cliente actualmente seleccionado en el expediente. ¿Está seguro de que desea continuar procesando este documento?",
+                        Icon = SweetAlertIcon.Warning,
+                        ShowCancelButton = true,
+                        ConfirmButtonText = "Sí, continuar",
+                        CancelButtonText = "Cancelar"
+                    });
+
+                    if (!confirmRfc.IsConfirmed)
+                    {
+                        // Aborta la carga y procesamiento de la proforma
+                        return;
+                    }
+                }
+
                 // SOLUCIÓN 1: Solo consultamos la BD si estamos editando (Id tiene valor).
                 if (Id.HasValue)
                 {
@@ -1365,45 +1399,73 @@
                         return; // Detiene la carga de los datos del PDF y va al finally
                     }
 
-                    // 4. Asignación de valores al modelo de la vista
-                    manifestacion.RfcImportador = proformaExtraida.RfcImportador;
-                    manifestacion.ReferenciaAdmin = proformaExtraida.NumeroPedimento;
-                    manifestacion.Referencia = proformaExtraida.Referencia;
+                    // ==========================================
+                    // VALIDACIÓN 2: SOBREESCRIBIR DATOS PREVIOS
+                    // ==========================================
+                    bool hasPreviousData = !string.IsNullOrWhiteSpace(manifestacion.ReferenciaAdmin) || 
+                                           !string.IsNullOrWhiteSpace(manifestacion.Referencia) || 
+                                           clienteSeleccionadoId > 0 ||
+                                           manifestacion.TotalValorAduana > 0;
+                    
+                    bool sobreescribirDatosGenerales = true;
 
-                    // Actualizamos el Select y la información del Cliente
-                    OnClienteSeleccionado(clienteEncontrado.ClienteId);
-
-                    // Totales globales
-                    if (!string.IsNullOrEmpty(proformaExtraida.ValorAduana) && decimal.TryParse(proformaExtraida.ValorAduana, out decimal valorAduana))
+                    if (hasPreviousData)
                     {
-                        manifestacion.TotalValorAduana = valorAduana;
+                        var confirmSobreescribir = await Swal.FireAsync(new SweetAlertOptions
+                        {
+                            Title = "¿Sobreescribir datos?",
+                            Text = "Ya existen datos previos (Pedimento, Referencia, Cliente o Totales). ¿Desea sobreescribirlos con los datos del documento escaneado?",
+                            Icon = SweetAlertIcon.Question,
+                            ShowCancelButton = true,
+                            ConfirmButtonText = "Sí, sobreescribir",
+                            CancelButtonText = "No, mantener originales"
+                        });
+
+                        sobreescribirDatosGenerales = confirmSobreescribir.IsConfirmed;
                     }
 
-                    if (!string.IsNullOrEmpty(proformaExtraida.PrecioPagado) && decimal.TryParse(proformaExtraida.PrecioPagado, out decimal precioPagado))
+                    if (sobreescribirDatosGenerales)
                     {
-                        manifestacion.TotalPrecioPagado = precioPagado;
-                    }
+                        // 4. Asignación de valores al modelo de la vista
+                        manifestacion.RfcImportador = proformaExtraida.RfcImportador;
+                        manifestacion.ReferenciaAdmin = proformaExtraida.NumeroPedimento;
+                        manifestacion.Referencia = proformaExtraida.Referencia;
 
-                    if (proformaExtraida.Incrementales != null && proformaExtraida.Incrementales.Length > 0)
-                    {
-                        decimal incFletes = 0, incSeguros = 0, incEmbalajes = 0, incOtros = 0;
-                        if (proformaExtraida.Incrementales.Length > 0) decimal.TryParse(proformaExtraida.Incrementales[0], out incFletes);
-                        if (proformaExtraida.Incrementales.Length > 1) decimal.TryParse(proformaExtraida.Incrementales[1], out incSeguros);
-                        if (proformaExtraida.Incrementales.Length > 2) decimal.TryParse(proformaExtraida.Incrementales[2], out incEmbalajes);
-                        if (proformaExtraida.Incrementales.Length > 3) decimal.TryParse(proformaExtraida.Incrementales[3], out incOtros);
-                        
-                        manifestacion.TotalIncrementables = incFletes + incSeguros + incEmbalajes + incOtros;
-                    }
+                        // Actualizamos el Select y la información del Cliente
+                        OnClienteSeleccionado(clienteEncontrado.ClienteId);
 
-                    if (proformaExtraida.Decrementables != null && proformaExtraida.Decrementables.Length > 0)
-                    {
-                        decimal decFletes = 0, decSeguros = 0, decEmbalajes = 0, decOtros = 0;
-                        if (proformaExtraida.Decrementables.Length > 0) decimal.TryParse(proformaExtraida.Decrementables[0], out decFletes);
-                        if (proformaExtraida.Decrementables.Length > 1) decimal.TryParse(proformaExtraida.Decrementables[1], out decSeguros);
-                        if (proformaExtraida.Decrementables.Length > 2) decimal.TryParse(proformaExtraida.Decrementables[2], out decEmbalajes);
-                        if (proformaExtraida.Decrementables.Length > 3) decimal.TryParse(proformaExtraida.Decrementables[3], out decOtros);
-                        
-                        manifestacion.TotalDecrementables = decFletes + decSeguros + decEmbalajes + decOtros;
+                        // Totales globales
+                        if (!string.IsNullOrEmpty(proformaExtraida.ValorAduana) && decimal.TryParse(proformaExtraida.ValorAduana, out decimal valorAduana))
+                        {
+                            manifestacion.TotalValorAduana = valorAduana;
+                        }
+
+                        if (!string.IsNullOrEmpty(proformaExtraida.PrecioPagado) && decimal.TryParse(proformaExtraida.PrecioPagado, out decimal precioPagado))
+                        {
+                            manifestacion.TotalPrecioPagado = precioPagado;
+                        }
+
+                        if (proformaExtraida.Incrementales != null && proformaExtraida.Incrementales.Length > 0)
+                        {
+                            decimal incFletes = 0, incSeguros = 0, incEmbalajes = 0, incOtros = 0;
+                            if (proformaExtraida.Incrementales.Length > 0) decimal.TryParse(proformaExtraida.Incrementales[0], out incFletes);
+                            if (proformaExtraida.Incrementales.Length > 1) decimal.TryParse(proformaExtraida.Incrementales[1], out incSeguros);
+                            if (proformaExtraida.Incrementales.Length > 2) decimal.TryParse(proformaExtraida.Incrementales[2], out incEmbalajes);
+                            if (proformaExtraida.Incrementales.Length > 3) decimal.TryParse(proformaExtraida.Incrementales[3], out incOtros);
+                            
+                            manifestacion.TotalIncrementables = incFletes + incSeguros + incEmbalajes + incOtros;
+                        }
+
+                        if (proformaExtraida.Decrementables != null && proformaExtraida.Decrementables.Length > 0)
+                        {
+                            decimal decFletes = 0, decSeguros = 0, decEmbalajes = 0, decOtros = 0;
+                            if (proformaExtraida.Decrementables.Length > 0) decimal.TryParse(proformaExtraida.Decrementables[0], out decFletes);
+                            if (proformaExtraida.Decrementables.Length > 1) decimal.TryParse(proformaExtraida.Decrementables[1], out decSeguros);
+                            if (proformaExtraida.Decrementables.Length > 2) decimal.TryParse(proformaExtraida.Decrementables[2], out decEmbalajes);
+                            if (proformaExtraida.Decrementables.Length > 3) decimal.TryParse(proformaExtraida.Decrementables[3], out decOtros);
+                            
+                            manifestacion.TotalDecrementables = decFletes + decSeguros + decEmbalajes + decOtros;
+                        }
                     }
 
                     // =========================================================
@@ -1411,8 +1473,26 @@
                     // =========================================================
 
                     manifestacion.Coves ??= new List<CoveDetalleDto>();
+                    
+                    bool hasPreviousCoves = manifestacion.Coves.Count > 0;
+                    bool extraerCoves = true;
 
-                    if (proformaExtraida.Anexos != null)
+                    if (hasPreviousCoves)
+                    {
+                        var confirmCoves = await Swal.FireAsync(new SweetAlertOptions
+                        {
+                            Title = "¿Extraer COVEs?",
+                            Text = "Ya existen COVEs registrados en este expediente. ¿Desea extraer y agregar los COVEs del documento escaneado? (Los COVEs repetidos se omitirán automáticamente).",
+                            Icon = SweetAlertIcon.Question,
+                            ShowCancelButton = true,
+                            ConfirmButtonText = "Sí, agregar",
+                            CancelButtonText = "No"
+                        });
+
+                        extraerCoves = confirmCoves.IsConfirmed;
+                    }
+
+                    if (extraerCoves && proformaExtraida.Anexos != null)
                     {
                         foreach (var anexo in proformaExtraida.Anexos)
                         {
