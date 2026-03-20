@@ -1,4 +1,4 @@
-﻿@page "/manifestaciones"
+@page "/manifestaciones"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -36,14 +36,10 @@
                 </div>
             </div>
 
-            @* Lado Derecho: Botón *@
-            @if (!bloquearCamposAA)
-            {
-                @* CAMBIO IMPORTANTE: btn-light (Blanco) con texto azul para resaltar en el fondo oscuro *@
-                <button class="btn btn-light fw-bold text-primary shadow-sm px-4" @onclick="IrANueva">
-                    <i class="bi bi-plus-lg me-2"></i> Nuevo Expediente
-                </button>
-            }
+            @* Lado Derecho: Botón (visible para todos los roles) *@
+            <button class="btn btn-light fw-bold text-primary shadow-sm px-4" @onclick="IrANueva">
+                <i class="bi bi-plus-lg me-2"></i> Nuevo Expediente
+            </button>
         </div>
     </div>
 

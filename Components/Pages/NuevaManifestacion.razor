@@ -40,8 +40,7 @@
                     <label class="form-label small fw-bold text-muted">NÚMERO PEDIMENTO</label>
                     <InputText class="form-control form-control-sm fw-bold text-primary"
                                @bind-Value="manifestacion.ReferenciaAdmin"
-                               placeholder="Ej: 5000001"
-                               disabled="@bloquearCamposAA" />
+                               placeholder="Ej: 5000001" />
                 </div>
 
                 @* COLUMNA 2: REFERENCIA (3 espacios) - NUEVO CAMPO *@
@@ -49,8 +48,7 @@
                     <label class="form-label small fw-bold text-muted">REFERENCIA</label>
                     <InputText class="form-control form-control-sm fw-bold text-dark"
                                @bind-Value="manifestacion.Referencia"
-                               placeholder="Ej: INT-2024-001"
-                               disabled="@bloquearCamposAA" />
+                               placeholder="Ej: INT-2024-001" />
                 </div>
 
                 @* COLUMNA 3: CLIENTE (3 espacios) *@
@@ -59,8 +57,7 @@
                     <InputSelect class="form-select form-select-sm"
                                  Value="clienteSeleccionadoId"
                                  ValueChanged="@((int id) => OnClienteSeleccionado(id))"
-                                 ValueExpression="@(() => clienteSeleccionadoId)"
-                                 disabled="@bloquearCamposAA">
+                                 ValueExpression="@(() => clienteSeleccionadoId)">
                         <option value="0">-- Seleccione --</option>
                         @if (ListaMisClientes != null)
                         {
@@ -401,11 +398,11 @@
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">NÚMERO COVE *</label>
-                                            <InputText class="form-control form-control-sm" @bind-Value="coveTemporal.NumeroCove" disabled="@bloquearCamposAA" />
+                                            <InputText class="form-control form-control-sm" @bind-Value="coveTemporal.NumeroCove" />
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">INCOTERM</label>
-                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.Incoterm" disabled="@bloquearCamposAA">
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.Incoterm">
                                                 <option value="">-- Seleccione --</option>
                                                 @foreach (var item in ListaIncoterms)
                                                 {
@@ -415,14 +412,14 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">VINCULACIÓN</label>
-                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.ExisteVinculacion" disabled="@bloquearCamposAA">
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.ExisteVinculacion">
                                                 <option value="false">NO</option>
                                                 <option value="true">SÍ</option>
                                             </InputSelect>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-muted">MÉTODO VALORACIÓN</label>
-                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.MetodoValoracion" disabled="@bloquearCamposAA">
+                                            <InputSelect class="form-select form-select-sm" @bind-Value="coveTemporal.MetodoValoracion">
                                                 <option value="">-- Seleccione --</option>
                                                 @foreach (var item in ListaMetodosValoracion)
                                                 {
