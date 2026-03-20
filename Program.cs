@@ -49,15 +49,6 @@ builder.Services.AddHttpClient("ApiClient", client =>
     client.BaseAddress = new Uri(apiUrl);
 }).AddHttpMessageHandler<ApiAuthorizationMessageHandler>();
 
-// Cliente HTTP especial para servicios de fondo (Singleton) que no tienen NavigationManager
-builder.Services.AddHttpClient("BackgroundApiClient", client =>
-{
-    client.BaseAddress = new Uri(apiUrl);
-});
-
-// EdocumentPendienteService: singleton para poder inyectarlo en componentes Blazor + hosted para el background loop
-builder.Services.AddSingleton<EdocumentPendienteService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<EdocumentPendienteService>());
 
 builder.Services.AddSweetAlert2();
 
