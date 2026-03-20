@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Json;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -21,10 +21,22 @@ namespace SistemaAduanero.Web.Auth
         {
             try
             {
-                // Intentamos leer el token
-                var token = await _localStorage.GetItemAsync<string>("authToken");
+                Console.WriteLine("[Auth-Trace] Llamada a GetAuthenticationStateAsync() iniciada.");
+                
+                // Manejar si el JS todavía no está disponible, aunque con prerender:false debería estarlo.
+                var token = await _localStorage.GetItemAsStringAsync("authToken");
+                
+                Console.WriteLine($"[Auth-Trace] Token recuperado: {(string.IsNullOrWhiteSpace(token) ? "NULL o ESPACIOS" : "OK (longitud " + token.Length + ")")}");
 
                 // Si no hay token o está vacío, retornamos Anónimo
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                }
+
+                // Limpiar comillas si el token fue guardado por SetItemAsync en formato JSON
+                token = token.Trim('"');
+
                 if (string.IsNullOrWhiteSpace(token))
                 {
                     return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
@@ -33,19 +45,35 @@ namespace SistemaAduanero.Web.Auth
                 // Si hay token, lo configuramos en el Header HTTP
                 _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", token);
 
+                var claims = ParseClaimsFromJwt(token).ToList();
+
+                // Validar expiración (exp)
+                var expClaim = claims.FirstOrDefault(c => c.Type == "exp")?.Value;
+                if (!string.IsNullOrEmpty(expClaim))
+                {
+                    var expTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expClaim));
+                    if (expTime <= DateTimeOffset.UtcNow)
+                    {
+                        Console.WriteLine("[Auth-Trace] Token expirado, limpiando sesión local.");
+                        await _localStorage.RemoveItemAsync("authToken");
+                        _http.DefaultRequestHeaders.Authorization = null;
+                        return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                    }
+                }
+
                 // Retornamos el estado de Autenticado
-                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt")));
+                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(claims, "jwt")));
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException ex)
             {
-                // ESTA ES LA MAGIA:
-                // Si estamos pre-renderizando (Server), JS Interop fallará lanzando InvalidOperationException.
-                // En ese caso, simplemente devolvemos "Anónimo" temporalmente para que no explote.
+                // Ocurre durante Prerender
+                Console.WriteLine($"[Auth] JS Interop fail (Prerender): {ex.Message}");
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Cualquier otro error, también retornamos anónimo
+                // Cualquier otro error se loguea para no perderlo
+                Console.WriteLine($"[Auth] Error al obtener el estado de autenticación: {ex.Message}");
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
         }
@@ -71,11 +99,15 @@ namespace SistemaAduanero.Web.Auth
             var payload = jwt.Split('.')[1];
             var jsonBytes = ParseBase64WithoutPadding(payload);
             var keyValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
-            return keyValuePairs.Select(kvp => new Claim(kvp.Key, kvp.Value.ToString()));
+            
+            return keyValuePairs.Select(kvp => new Claim(kvp.Key, kvp.Value?.ToString() ?? ""));
         }
 
         private byte[] ParseBase64WithoutPadding(string base64)
         {
+            // Arreglar codificación Base64Url a Base64 estándar
+            base64 = base64.Replace('-', '+').Replace('_', '/');
+            
             switch (base64.Length % 4)
             {
                 case 2: base64 += "=="; break;
@@ -88,6 +120,7 @@ namespace SistemaAduanero.Web.Auth
         public async Task CerrarSesion()
         {
             await _localStorage.RemoveItemAsync("authToken");
+            await _localStorage.RemoveItemAsync("termsAccepted");
 
             // --- CORRECCIÓN AQUÍ ---
             // Limpiamos la cabecera INMEDIATAMENTE para que la siguiente petición falle o sea anónima

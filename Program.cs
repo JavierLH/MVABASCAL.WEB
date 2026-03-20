@@ -14,25 +14,32 @@ var apiUrl = "http://localhost:5207";
 //8081
 //5207";
 
-builder.Services.AddScoped(sp => new HttpClient
+// HTTP Clients
+builder.Services.AddTransient<ApiAuthorizationMessageHandler>();
+
+builder.Services.AddScoped(sp => 
 {
-    BaseAddress = new Uri(apiUrl)
+    var handler = sp.GetRequiredService<ApiAuthorizationMessageHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler) { BaseAddress = new Uri(apiUrl) };
 });
 // 1. Servicio de LocalStorage
 builder.Services.AddBlazoredLocalStorage();
 
-// 2. Servicio de Autenticaci�n
+// 2. Servicio de Autenticacin
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddScoped<SistemaAduanero.Web.Services.TermsStateService>();
 
-// Configuraci�n de Autenticaci�n para soportar [Authorize]
+// Configuración de Autenticación para soportar [Authorize] en SSR
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/login"; // Ruta a donde te manda si no tienes permiso
+        options.LoginPath = "/login"; // Ruta a donde te manda si no tienes permiso (ej en refresh)
         options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
-    }); builder.Services.AddRazorComponents()
+    });
+
+ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 
@@ -40,11 +47,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddHttpClient("ApiClient", client =>
 {
     client.BaseAddress = new Uri(apiUrl);
-});
+}).AddHttpMessageHandler<ApiAuthorizationMessageHandler>();
 
-// EdocumentPendienteService: singleton para poder inyectarlo en componentes Blazor + hosted para el background loop
-builder.Services.AddSingleton<EdocumentPendienteService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<EdocumentPendienteService>());
 
 builder.Services.AddSweetAlert2();
 

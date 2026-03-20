@@ -3,8 +3,6 @@
 @using SistemaAduanero.Web.Services
 @inject IJSRuntime JS
 @inject System.Net.Http.HttpClient Http
-@inject EdocumentPendienteService EdocService
-@implements IDisposable
 
 @if (Mostrar)
 {
@@ -337,22 +335,7 @@
     [Parameter] public string Cliente { get; set; } = "";
     [Parameter] public bool SoloLectura { get; set; } = false;
     [Parameter] public bool EsAA { get; set; } = false;
-
-    private bool _callbacksRegistrados = false;
-
-    protected override void OnParametersSet()
-    {
-        if (Mostrar && !_callbacksRegistrados)
-        {
-            RegistrarCallbacks();
-            _callbacksRegistrados = true;
-        }
-        else if (!Mostrar && _callbacksRegistrados)
-        {
-            DesregistrarCallbacks();
-            _callbacksRegistrados = false;
-        }
-    }
+    
 
     
 
@@ -372,35 +355,10 @@
 
     private async Task Cerrar()
     {
-        DesregistrarCallbacks();
         Mostrar = false;
         await MostrarChanged.InvokeAsync(Mostrar);
     }
-
-    // Registra callbacks para todos los docs que tienen NOperacion pero sin Edocument
-    private void RegistrarCallbacks()
-    {
-        foreach (var doc in Documentos)
-        {
-            if (!string.IsNullOrEmpty(doc.NOperacion) && string.IsNullOrEmpty(doc.Edocument))
-            {
-                var docCapturado = doc; // captura para el closure
-                EdocService.RegistrarCallback(doc.AnexoId, async (edoc) =>
-                {
-                    docCapturado.Edocument = edoc;
-                    await InvokeAsync(StateHasChanged);
-                });
-            }
-        }
-    }
-
-    private void DesregistrarCallbacks()
-    {
-        foreach (var doc in Documentos)
-            EdocService.DesregistrarCallback(doc.AnexoId);
-    }
-
-    public void Dispose() => DesregistrarCallbacks();
+    
 
     private bool mostrarModalCatalogo = false;
     private List<DocumentoExpedienteDto> catalogoDisponible = new();

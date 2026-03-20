@@ -4,6 +4,7 @@
 @using SistemaAduanero.Web.Auth
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
@@ -75,8 +76,10 @@
         var respuesta = new ResponderTerminosDto { Aceptado = true };
         var response = await Http.PostAsJsonAsync("api/Auth/responder-terminos", respuesta);
 
+        // Permitimos aceptar si el API lo permite o si el guardado funciona localmente.
         if (response.IsSuccessStatusCode)
         {
+            await LocalStorage.SetItemAsync("termsAccepted", true);
             TermsState.HasAcceptedTerms = true;
             NavigationManager.NavigateTo("/"); // Redirige a home por Blazor router
         }

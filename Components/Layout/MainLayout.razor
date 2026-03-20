@@ -2,6 +2,7 @@
 @using SistemaAduanero.Web.Auth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
 <div class="page @(menuColapsado ? "menu-minimized" : "")">
     @if (TermsState.HasAcceptedTerms)
@@ -65,6 +66,15 @@
 
         if (user.Identity?.IsAuthenticated == true)
         {
+            if (!TermsState.HasAcceptedTerms)
+            {
+                var acceptedInStorage = await LocalStorage.GetItemAsync<bool>("termsAccepted");
+                if (acceptedInStorage)
+                {
+                    TermsState.HasAcceptedTerms = true;
+                }
+            }
+
             if (!NavManager.Uri.Contains("/terminos") && 
                 !NavManager.Uri.Contains("/login") && 
                 !NavManager.Uri.Contains("/recuperar-password") && 

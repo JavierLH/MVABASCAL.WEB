@@ -1,4 +1,4 @@
-﻿@page "/herramientas/convertidor-vucem"
+@page "/herramientas/convertidor-vucem"
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject SweetAlertService Swal
@@ -57,6 +57,16 @@
 
 @code {
     private bool procesando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Validamos que el token siga vivo desde el inicio
+            await Http.GetAsync("api/Auth/ping");
+        }
+        catch (Exception) { /* Ignorado, el DelegatingHandler se encarga del 401 */ }
+    }
 
     private async Task SubirArchivo(InputFileChangeEventArgs e)
     {
