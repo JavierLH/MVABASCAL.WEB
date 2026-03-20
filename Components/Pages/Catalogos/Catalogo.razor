@@ -1,4 +1,6 @@
-﻿@page "/catalogo"
+@page "/catalogo"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject HttpClient Http
 @inject SweetAlertService Swal
 <div class="container-fluid mt-4">

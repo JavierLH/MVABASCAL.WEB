@@ -1,4 +1,4 @@
-﻿@page "/login"
+@page "/login"
 
 @using Microsoft.AspNetCore.Authorization
 @attribute [AllowAnonymous]
@@ -47,6 +47,24 @@
     private LoginDto loginModel = new LoginDto();
     private string mensajeError;
     private bool estaCargando = false;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Si el usuario recarga la página, el servidor (que no puede leer LocalStorage)
+        // lo redirigirá aquí. Pero en cuanto Blazor levante en el cliente, evalúa el estado.
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Console.WriteLine("[Auth] Usuario ya autenticado desde LocalStorage, redirigiendo de vuelta...");
+            var destination = string.IsNullOrEmpty(ReturnUrl) ? "/" : ReturnUrl;
+            NavManager.NavigateTo(destination, forceLoad: false);
+        }
+    }
+
     private async Task IniciarSesion()
     {
         // Activamos el modo carga

@@ -68,7 +68,7 @@ namespace SistemaAduanero.Web.Services
 
         private async Task ProcesarPendientesAsync(CancellationToken stoppingToken)
         {
-            var client = _httpClientFactory.CreateClient("ApiClient");
+            var client = _httpClientFactory.CreateClient("BackgroundApiClient");
 
             List<PendienteEdocumentDto>? pendientes = null;
             try
