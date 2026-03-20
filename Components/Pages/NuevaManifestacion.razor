@@ -28,6 +28,19 @@
                 <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="GuardarTodo">
                     <i class="bi bi-floppy-fill"></i> GUARDAR
                 </button>
+                @* NUEVO BOTÓN: TRANSMITIR A VUCEM *@
+                @if (Id.HasValue && ProgresoExpediente == 100 && manifestacion.EstadoEnvio != "ENVIADO")
+                {
+                    <button class="btn btn-success btn-sm fw-bold shadow-sm ms-2 fade-in" @onclick="TransmitirExpedienteVucem">
+                        <i class="bi bi-cloud-arrow-up-fill"></i> TRANSMITIR A VUCEM
+                    </button>
+                }
+
+                @* ETIQUETA SI YA ESTÁ ENVIADO *@
+                @if (manifestacion.EstadoEnvio == "ENVIADO" || manifestacion.EstadoEnvio == "COMPLETO")
+                {
+                    <span class="badge bg-success ms-2 fs-6 shadow-sm"><i class="bi bi-lock-fill"></i> TRANSMITIDO AL SAT</span>
+                }
             </div>
         </div>
 
@@ -342,7 +355,8 @@
         OnAgregarDesdeCatalogo="AgregarDocumentoDesdeCatalogo"
         DocumentoModificado="GuardarEstadoDocumento"
         OnEnviarMensaje="EnviarNotaDesdeComponente"
-        OnDigitalizarVucem="DigitalizarDocumentoVucem" />
+        OnDigitalizarVucem="DigitalizarDocumentoVucem"
+        OnConsultarVucem="ConsultarEdocumentVucem" />
     }
     
     @* === fin === *@
@@ -2290,13 +2304,16 @@
 
         try
         {
+            var authState = await AuthStateTask;
+            var nombreUsuario = authState.User?.Identity?.Name ?? "Usuario_Local";
             // 2. Disparamos la petición al Orquestador
             var peticionFront = new
             {
                 ClienteId = manifestacion.ClienteId,
                 DocumentoId = doc.AnexoId,
                 RfcConsulta = manifestacion.RfcImportador,
-                IdTipoDocumento = 170 // Ajustar si es dinámico
+                IdTipoDocumento = 170,
+                Usuario = nombreUsuario
             };
 
             var response = await Http.PostAsJsonAsync("api/APIVucem/ejecutar-desde-bd", peticionFront);
@@ -2380,6 +2397,153 @@
         {
             await Swal.CloseAsync();
             await Swal.FireAsync("Error de Conexión", $"No se pudo contactar al servidor: {ex.Message}", SweetAlertIcon.Error);
+        }
+    }
+    private async Task ConsultarEdocumentVucem(DocumentoExpedienteDto doc)
+    {
+        // 1. Mostrar loader
+        #pragma warning disable CS4014
+        Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "Consultando VUCEM...",
+            Text = "Verificando estado del ticket...",
+            AllowOutsideClick = false,
+            AllowEscapeKey = false,
+            ShowConfirmButton = false,
+            DidOpen = new SweetAlertCallback(async () => await Swal.ShowLoadingAsync())
+        });
+        #pragma warning restore CS4014
+
+        try
+        {
+            // 2. Disparamos la petición al Orquestador de Consulta
+            var peticionFront = new
+            {
+                ClienteId = manifestacion.ClienteId,
+                DocumentoId = doc.AnexoId,
+                RfcConsulta = manifestacion.RfcImportador
+            };
+
+            var response = await Http.PostAsJsonAsync("api/APIVucem/consultar-desde-bd", peticionFront);
+            await Swal.CloseAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var resultadoVucem = await response.Content.ReadAsStringAsync();
+                string edocumentExtraido = "";
+
+                // ==========================================================
+                // EXTRACCIÓN DEL JSON DE CONSULTA
+                // ==========================================================
+                using (JsonDocument docJson = JsonDocument.Parse(resultadoVucem))
+                {
+                    var root = docJson.RootElement;
+
+                    // Estructura A: Envuelto en respuesta de servicio
+                    if (root.TryGetProperty("consultaDigitalizarDocumentoServiceResponse", out var consulta) && consulta.ValueKind != JsonValueKind.Null)
+                    {
+                        if (consulta.TryGetProperty("eDocumentField", out var edoc))
+                            edocumentExtraido = edoc.GetString() ?? "";
+                    }
+                    // Estructura B: Directo en la raíz o acuse
+                    else if (root.TryGetProperty("eDocumentField", out var edocDirect) && edocDirect.ValueKind != JsonValueKind.Null)
+                    {
+                        edocumentExtraido = edocDirect.GetString() ?? "";
+                    }
+                }
+
+                // ==========================================================
+                // GUARDADO Y ALERTAS
+                // ==========================================================
+                if (!string.IsNullOrEmpty(edocumentExtraido))
+                {
+                    var updatePayload = new { Edocument = edocumentExtraido };
+                    var putResponse = await Http.PutAsJsonAsync($"api/Documentos/{doc.AnexoId}/edocument", updatePayload);
+
+                    await Swal.FireAsync("¡Completado!", $"E-Document obtenido: {edocumentExtraido}", SweetAlertIcon.Success);
+                    await CargarExpediente(Id.Value);
+                }
+                else
+                {
+                    // Si VUCEM responde 200 OK pero aún no hay eDocument, significa que sigue procesando
+                    await Swal.FireAsync("Aviso VUCEM", "VUCEM aún está procesando el documento. Intenta consultar de nuevo en unos momentos.", SweetAlertIcon.Info);
+                }
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                await Swal.FireAsync("Aviso de Sistema", error, SweetAlertIcon.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Swal.CloseAsync();
+            await Swal.FireAsync("Error de Conexión", $"No se pudo contactar al servidor central: {ex.Message}", SweetAlertIcon.Error);
+        }
+
+    }
+    private async Task TransmitirExpedienteVucem()
+    {
+        if (!Id.HasValue) return;
+
+        // 1. Confirmación de seguridad
+        var confirmacion = await Swal.FireAsync(new SweetAlertOptions
+        {
+            Title = "¿Transmitir Manifestación al SAT?",
+            Text = "Una vez transmitida, el expediente se firmará con la e.firma del cliente, se enviará a VUCEM y quedará bloqueado para edición.",
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Sí, Firmar y Transmitir",
+            CancelButtonText = "Revisar de nuevo",
+            ConfirmButtonColor = "#198754" // Color verde éxito
+        });
+
+        if (confirmacion.IsConfirmed)
+        {
+            // 2. Mostrar loader de "Trabajando..."
+            #pragma warning disable CS4014
+            Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Transmitiendo a VUCEM...",
+                Text = "Armando expediente, firmando y conectando con el SAT. Por favor espera...",
+                AllowOutsideClick = false,
+                AllowEscapeKey = false,
+                ShowConfirmButton = false,
+                DidOpen = new SweetAlertCallback(async () => await Swal.ShowLoadingAsync())
+            });
+            #pragma warning restore CS4014
+
+            try
+            {
+                // 3. Disparar al nuevo endpoint orquestador
+                var response = await Http.PostAsync($"api/ManifestacionesValor/{Id.Value}/enviar-vucem", null);
+
+                // Cerramos el loader
+                await Swal.CloseAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Si tienes el JSON de respuesta, puedes intentar extraer el N. Operación para mostrarlo aquí,
+                    // pero con el simple éxito basta por ahora.
+                    await Swal.FireAsync("¡Transmisión Exitosa!", "La manifestación de valor ha sido enviada al SAT y el expediente ha sido bloqueado.", SweetAlertIcon.Success);
+
+                    // 4. Bloqueamos la UI para el usuario actual
+                    manifestacion.EstadoEnvio = "ENVIADO";
+                    bloquearCamposAA = true;
+
+                    StateHasChanged();
+                }
+                else
+                {
+                    var errorMsg = await response.Content.ReadAsStringAsync();
+                    await Swal.FireAsync("No se pudo transmitir", errorMsg, SweetAlertIcon.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                await Swal.CloseAsync();
+                await Swal.FireAsync("Error de Conexión", $"Error crítico al intentar transmitir: {ex.Message}", SweetAlertIcon.Error);
+            }
         }
     }
     public class CatalogoDto { public string Clave { get; set; } = ""; public string Descripcion { get; set; } = ""; }

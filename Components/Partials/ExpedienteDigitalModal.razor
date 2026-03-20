@@ -181,12 +181,30 @@
                                                 <input type="text" class="form-control form-control-sm text-center" placeholder="e-Document" value="@doc.Edocument" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
                                                 <input type="text" class="form-control form-control-sm text-center" placeholder="N. Operación" value="@doc.NOperacion" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
                                                 <div class="mt-2">
-                                                    <button type="button" class="btn btn-primary btn-sm w-100 py-0" style="font-size: 0.70rem; height: 24px;"
-                                                            @onclick="@(() => OnDigitalizarVucem.InvokeAsync(doc))"
-                                                            disabled="@(SoloLectura || string.IsNullOrEmpty(doc.NombreArchivo))">
-                                                        <i class="bi bi-send"></i> Enviar VUCEM
-                                                    </button>
-                                                    
+                                                    @if (!string.IsNullOrEmpty(doc.Edocument))
+                                                    {
+                                                        @* Ya tiene e-Document: Se completó el flujo *@
+                                                        <span class="badge bg-success w-100 py-1" style="font-size: 0.70rem;">
+                                                            <i class="bi bi-check-circle-fill"></i> Digitalizado
+                                                        </span>
+                                                    }
+                                                    else if (!string.IsNullOrEmpty(doc.NOperacion) && doc.NOperacion != "0")
+                                                    {
+                                                        @* Ya tiene Ticket: Mostrar botón para consultar *@
+                                                        <button type="button" class="btn btn-warning btn-sm w-100 py-0 fw-bold text-dark" style="font-size: 0.70rem; height: 24px;"
+                                                                @onclick="@(() => OnConsultarVucem.InvokeAsync(doc))">
+                                                            <i class="bi bi-arrow-clockwise"></i> Consultar Ticket
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        @* No tiene nada: Mostrar botón original para Enviar *@
+                                                        <button type="button" class="btn btn-primary btn-sm w-100 py-0" style="font-size: 0.70rem; height: 24px;"
+                                                                @onclick="@(() => OnDigitalizarVucem.InvokeAsync(doc))"
+                                                                disabled="@(SoloLectura || string.IsNullOrEmpty(doc.NombreArchivo))">
+                                                            <i class="bi bi-send"></i> Enviar VUCEM
+                                                        </button>
+                                                    }
                                                 </div>
                                             </div>
 
@@ -306,6 +324,17 @@
     [Parameter] public EventCallback<bool> MostrarChanged { get; set; }
     [Parameter] public List<DocumentoExpedienteDto> Documentos { get; set; } = new();
     [Parameter] public List<NotaExpedienteDto> Notas { get; set; } = new();
+    [Parameter] public EventCallback<(DocumentoExpedienteDto Doc, InputFileChangeEventArgs Args)> OnSubirArchivo { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarArchivo { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarRegistro { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnAgregarDesdeCatalogo { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> DocumentoModificado { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnDigitalizarVucem { get; set; }
+    [Parameter] public EventCallback<DocumentoExpedienteDto> OnConsultarVucem { get; set; } 
+    [Parameter] public EventCallback<string> OnEnviarMensaje { get; set; }
+    [Parameter] public string Pedimento { get; set; } = "";
+    [Parameter] public string Referencia { get; set; } = "";
+    [Parameter] public string Cliente { get; set; } = "";
     [Parameter] public bool SoloLectura { get; set; } = false;
     [Parameter] public bool EsAA { get; set; } = false;
 
@@ -325,17 +354,7 @@
         }
     }
 
-    [Parameter] public EventCallback<(DocumentoExpedienteDto Doc, InputFileChangeEventArgs Args)> OnSubirArchivo { get; set; }
-    [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarArchivo { get; set; }
-    [Parameter] public EventCallback<DocumentoExpedienteDto> OnEliminarRegistro { get; set; }
-    [Parameter] public EventCallback<DocumentoExpedienteDto> OnAgregarDesdeCatalogo { get; set; }
-    [Parameter] public EventCallback<DocumentoExpedienteDto> DocumentoModificado { get; set; }
-    //[Parameter] public EventCallback DocumentoModificado { get; set; }
-    [Parameter] public EventCallback<string> OnEnviarMensaje { get; set; }
-    [Parameter] public EventCallback<DocumentoExpedienteDto> OnDigitalizarVucem { get; set; }
-    [Parameter] public string Pedimento { get; set; } = "";
-    [Parameter] public string Referencia { get; set; } = "";
-    [Parameter] public string Cliente { get; set; } = "";
+    
 
     private string nuevoMensaje = "";
 
