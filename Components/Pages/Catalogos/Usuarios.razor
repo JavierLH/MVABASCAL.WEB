@@ -414,11 +414,11 @@
             }
         }
 
-        if (string.IsNullOrEmpty(usuario.Email))
-        {
-            await MostrarToast("El correo electrónico es obligatorio.", SweetAlertIcon.Warning);
-            return;
-        }
+        // if (string.IsNullOrEmpty(usuario.Email))
+        // {
+        //     await MostrarToast("El correo electrónico es obligatorio.", SweetAlertIcon.Warning);
+        //     return;
+        // }
 
         if (usuario.UsuarioId == 0 && string.IsNullOrEmpty(usuario.PasswordSinEncriptar))
         {
