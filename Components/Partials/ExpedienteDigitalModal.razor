@@ -176,42 +176,52 @@
                                             </div>
 
                                             <div class="d-flex flex-column justify-content-center gap-1 border-start ps-3 pe-2" style="flex: 1; min-width: 120px;">
-                                                <input type="text" class="form-control form-control-sm text-center" placeholder="e-Document" value="@doc.Edocument" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
-                                                <input type="text" class="form-control form-control-sm text-center" placeholder="N. Operación" value="@doc.NOperacion" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
-                                                <div class="mt-2">
-                                                    @if (!string.IsNullOrEmpty(doc.Edocument))
-                                                    {
-                                                        @* Ya tiene e-Document: Se completó el flujo *@
-                                                        <span class="badge bg-success w-100 py-1" style="font-size: 0.70rem;">
-                                                            <i class="bi bi-check-circle-fill"></i> Digitalizado
-                                                        </span>
-                                                    }
-                                                    else if (!string.IsNullOrEmpty(doc.NOperacion) && doc.NOperacion != "0")
-                                                    {
-                                                        @* Ya tiene Ticket: Mostrar botón para consultar *@
-                                                        <button type="button" class="btn btn-warning btn-sm w-100 py-0 fw-bold text-dark" style="font-size: 0.70rem; height: 24px;"
-                                                                @onclick="@(() => OnConsultarVucem.InvokeAsync(doc))">
-                                                            <i class="bi bi-arrow-clockwise"></i> Consultar Ticket
-                                                        </button>
-                                                    }
-                                                    else
-                                                    {
-                                                        @* No tiene nada: Mostrar botón original para Enviar *@
-                                                        <button type="button" class="btn btn-primary btn-sm w-100 py-0" style="font-size: 0.70rem; height: 24px;"
-                                                                @onclick="@(() => OnDigitalizarVucem.InvokeAsync(doc))"
-                                                                disabled="@(SoloLectura || string.IsNullOrEmpty(doc.NombreArchivo))">
-                                                            <i class="bi bi-send"></i> Enviar VUCEM
-                                                        </button>
-                                                    }
-                                                </div>
+                                                @if (doc.SeEnviaAVucem)
+                                                {
+                                                    <input type="text" class="form-control form-control-sm text-center" placeholder="e-Document" value="@doc.Edocument" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
+                                                    <input type="text" class="form-control form-control-sm text-center" placeholder="N. Operación" value="@doc.NOperacion" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
+                                                    <div class="mt-2">
+                                                        @if (!string.IsNullOrEmpty(doc.Edocument))
+                                                        {
+                                                            @* Ya tiene e-Document: Se completó el flujo *@
+                                                            <span class="badge bg-success w-100 py-1" style="font-size: 0.70rem;">
+                                                                <i class="bi bi-check-circle-fill"></i> Digitalizado
+                                                            </span>
+                                                        }
+                                                        else if (!string.IsNullOrEmpty(doc.NOperacion) && doc.NOperacion != "0")
+                                                        {
+                                                            @* Ya tiene Ticket: Mostrar botón para consultar *@
+                                                            <button type="button" class="btn btn-warning btn-sm w-100 py-0 fw-bold text-dark" style="font-size: 0.70rem; height: 24px;"
+                                                                    @onclick="@(() => OnConsultarVucem.InvokeAsync(doc))">
+                                                                <i class="bi bi-arrow-clockwise"></i> Consultar Ticket
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            @* No tiene nada: Mostrar botón original para Enviar *@
+                                                            <button type="button" class="btn btn-primary btn-sm w-100 py-0" style="font-size: 0.70rem; height: 24px;"
+                                                                    @onclick="@(() => OnDigitalizarVucem.InvokeAsync(doc))"
+                                                                    disabled="@(SoloLectura || string.IsNullOrEmpty(doc.NombreArchivo))">
+                                                                <i class="bi bi-send"></i> Enviar VUCEM
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                }
                                             </div>
 
-
-                                            <button type="button" class="btn btn-outline-danger btn-sm w-5 py-0 mt-0" style="font-size: 0.70rem; height: 24px;"
-                                                    @onclick="@(() => EliminarRegistroBoton(doc))"
-                                                    disabled="@(SoloLectura)">
-                                                <i class="bi bi-trash"></i> Eliminar Vucem
-                                            </button>
+                                            @if (doc.SeEnviaAVucem)
+                                            {
+                                                <button type="button" class="btn btn-outline-danger btn-sm w-5 py-0 mt-0" style="font-size: 0.70rem; height: 24px;"
+                                                        @onclick="@(() => EliminarRegistroBoton(doc))"
+                                                        disabled="@(SoloLectura)">
+                                                    <i class="bi bi-trash"></i> Eliminar Vucem
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <!-- Empty div to keep layout if needed, though w-5 is small -->
+                                                <div style="width: 5%;"></div>
+                                            }
 
                                         </div>
                                     </div>
