@@ -296,7 +296,7 @@
     {
         if (string.IsNullOrEmpty(cliente.RFC) || cliente.RFC.Length < 12) { await MostrarToast("RFC inválido", SweetAlertIcon.Warning); return; }
         if (string.IsNullOrEmpty(cliente.RazonSocial)) { await MostrarToast("Razón Social obligatoria", SweetAlertIcon.Warning); return; }
-        if (string.IsNullOrEmpty(cliente?.Emails.FirstOrDefault()?.Email)) { await MostrarToast("Debes registrar al menos un correo electrónico", SweetAlertIcon.Warning); return; }
+        // if (string.IsNullOrEmpty(cliente?.Emails.FirstOrDefault()?.Email)) { await MostrarToast("Debes registrar al menos un correo electrónico", SweetAlertIcon.Warning); return; }
 
         try
         {
