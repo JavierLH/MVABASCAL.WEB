@@ -512,6 +512,35 @@
                             }
                         </div>
                     </div>
+
+                    @* --- SECCIÓN 5: EDOCUMENTS --- *@
+                    @if (manifestacionSeleccionada.Edocuments != null && manifestacionSeleccionada.Edocuments.Any())
+                    {
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white py-2">
+                                <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-file-earmark-check-fill"></i> eDOCUMENTS ASOCIADOS</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-3">NÚMERO EDOCUMENT</th>
+                                            <th>DESCRIPCIÓN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var edoc in manifestacionSeleccionada.Edocuments)
+                                        {
+                                            <tr>
+                                                <td class="ps-3 fw-bold text-primary">@edoc.NumeroEdocument</td>
+                                                <td><span class="text-secondary">@(edoc.Descripcion ?? "Sin descripción")</span></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
                 </div>
 
                 @* --- FOOTER: ACCIONES (RF-07) --- *@
