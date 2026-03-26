@@ -41,6 +41,14 @@
                 {
                     <span class="badge bg-success ms-2 fs-6 shadow-sm"><i class="bi bi-lock-fill"></i> TRANSMITIDO AL SAT</span>
                 }
+
+                @* NUEVA ETIQUETA: NÚMERO DE OPERACIÓN *@
+                @if (!string.IsNullOrEmpty(manifestacion.NumeroOperacionVucem))
+                {
+                    <span class="badge bg-info text-dark ms-2 fs-6 shadow-sm border border-info">
+                        <i class="bi bi-hash"></i> N. OP VUCEM: @manifestacion.NumeroOperacionVucem
+                    </span>
+                }
             </div>
         </div>
 
@@ -73,7 +81,7 @@
                                  Value="clienteSeleccionadoId"
                                  ValueChanged="@((int id) => OnClienteSeleccionado(id))"
                                  ValueExpression="@(() => clienteSeleccionadoId)"
-                                 disabled="@bloquearCamposAA">
+                                 >
                         <option value="0">-- Seleccione --</option>
                         @if (ListaMisClientes != null)
                         {
@@ -1193,7 +1201,12 @@
                 manifestacion.ReferenciaAdmin = res.NumeroPedimento;
                 manifestacion.Referencia = res.Referencia;
                 manifestacion.RfcImportador = res.RfcImportador;
-
+                manifestacion.NumeroOperacionVucem = res.NumeroOperacionVucem;
+                manifestacion.EstadoEnvio = res.EstadoEnvio;
+                if (manifestacion.EstadoEnvio == "ENVIADO")
+                {
+                    bloquearCamposAA = true;
+                }
                 // IMPORTANTE: Recuperar el Cliente seleccionado para el Dropdown
                 // Asegúrate que tu ManifestacionDto en el BackEnd traiga esta propiedad 'ClienteId'
                 if (res.ClienteId > 0)
@@ -2495,13 +2508,13 @@
             ShowCancelButton = true,
             ConfirmButtonText = "Sí, Firmar y Transmitir",
             CancelButtonText = "Revisar de nuevo",
-            ConfirmButtonColor = "#198754" // Color verde éxito
+            ConfirmButtonColor = "#198754"
         });
 
         if (confirmacion.IsConfirmed)
         {
             // 2. Mostrar loader de "Trabajando..."
-            #pragma warning disable CS4014
+#pragma warning disable CS4014
             Swal.FireAsync(new SweetAlertOptions
             {
                 Title = "Transmitiendo a VUCEM...",
@@ -2511,7 +2524,7 @@
                 ShowConfirmButton = false,
                 DidOpen = new SweetAlertCallback(async () => await Swal.ShowLoadingAsync())
             });
-            #pragma warning restore CS4014
+#pragma warning restore CS4014
 
             try
             {
@@ -2523,14 +2536,28 @@
 
                 if (response.IsSuccessStatusCode)
                 {
-                    // Si tienes el JSON de respuesta, puedes intentar extraer el N. Operación para mostrarlo aquí,
-                    // pero con el simple éxito basta por ahora.
-                    await Swal.FireAsync("¡Transmisión Exitosa!", "La manifestación de valor ha sido enviada al SAT y el expediente ha sido bloqueado.", SweetAlertIcon.Success);
+                    // =========================================================================
+                    // LA MAGIA AQUÍ: Recargamos el expediente fresco desde la Base de Datos
+                    // =========================================================================
+                    await CargarExpediente(Id.Value);
 
-                    // 4. Bloqueamos la UI para el usuario actual
-                    manifestacion.EstadoEnvio = "ENVIADO";
+                    // Como ya recargamos, 'manifestacion' ya trae el NumeroOperacion y el EstadoEnvio
+                    string mensajeAlerta = "La manifestación de valor ha sido enviada al SAT y el expediente ha sido bloqueado.";
+
+                    if (!string.IsNullOrEmpty(manifestacion.NumeroOperacionVucem))
+                    {
+                        mensajeAlerta += $"<br><br><b>No. Operación VUCEM: {manifestacion.NumeroOperacionVucem}</b>";
+                    }
+
+                    await Swal.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "¡Transmisión Exitosa!",
+                        Html = mensajeAlerta,
+                        Icon = SweetAlertIcon.Success
+                    });
+
+                    // Bloqueamos la interfaz
                     bloquearCamposAA = true;
-
                     StateHasChanged();
                 }
                 else
@@ -2548,7 +2575,6 @@
     }
     public class CatalogoDto { public string Clave { get; set; } = ""; public string Descripcion { get; set; } = ""; }
     
-    // ---> AGREGAR ESTE BLOQUE DE CÓDIGO
 
 
 
