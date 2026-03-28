@@ -27,7 +27,26 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddBlazoredLocalStorage();
 
 // 2. Servicio de Autenticacin
-builder.Services.AddAuthorizationCore();
+builder.Services.AddAuthorizationCore(options =>
+{
+    
+    options.AddPolicy("TransmitirVucem", policy =>
+        policy.RequireClaim("Permission", "vucem:transmitir"));
+
+    options.AddPolicy("LeerProforma", policy =>
+        policy.RequireClaim("Permission", "proforma:leer"));
+
+    options.AddPolicy("EnviarDigitalizacionVucem", policy =>
+        policy.RequireClaim("Permission", "vucem:digitalizar"));
+
+    options.AddPolicy("EditarExpediente", policy =>
+        policy.RequireClaim("Permission", "manifestacion:editar"));
+
+    options.AddPolicy("CamposAgenteAduanal", policy =>
+        policy.RequireClaim("Permission", "campos_aa:editar"));
+});
+
+
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddScoped<SistemaAduanero.Web.Services.TermsStateService>();
 
@@ -35,7 +54,7 @@ builder.Services.AddScoped<SistemaAduanero.Web.Services.TermsStateService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/login"; // Ruta a donde te manda si no tienes permiso (ej en refresh)
+        options.LoginPath = "/login";
         options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
     });
 

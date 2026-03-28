@@ -176,11 +176,11 @@
                                             </div>
 
                                             <div class="d-flex flex-column justify-content-center gap-1 border-start ps-3 pe-2" style="flex: 1; min-width: 120px;">
-                                                @if (doc.SeEnviaAVucem)
-                                                {
-                                                    <input type="text" class="form-control form-control-sm text-center" placeholder="e-Document" value="@doc.Edocument" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
-                                                    <input type="text" class="form-control form-control-sm text-center" placeholder="N. Operación" value="@doc.NOperacion" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
-                                                    <div class="mt-2">
+                                                <input type="text" class="form-control form-control-sm text-center" placeholder="e-Document" value="@doc.Edocument" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
+                                                <input type="text" class="form-control form-control-sm text-center" placeholder="N. Operación" value="@doc.NOperacion" readonly style="font-size: 0.75rem; background-color: #e9ecef;" />
+                                                <div class="mt-2">
+                                                    <AuthorizeView Policy="EnviarDigitalizacionVucem">
+                                                    <Authorized>
                                                         @if (!string.IsNullOrEmpty(doc.Edocument))
                                                         {
                                                             @* Ya tiene e-Document: Se completó el flujo *@
@@ -205,23 +205,17 @@
                                                                 <i class="bi bi-send"></i> Enviar VUCEM
                                                             </button>
                                                         }
-                                                    </div>
-                                                }
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                </div>
                                             </div>
 
-                                            @if (doc.SeEnviaAVucem)
-                                            {
-                                                <button type="button" class="btn btn-outline-danger btn-sm w-5 py-0 mt-0" style="font-size: 0.70rem; height: 24px;"
-                                                        @onclick="@(() => EliminarRegistroBoton(doc))"
-                                                        disabled="@(SoloLectura)">
-                                                    <i class="bi bi-trash"></i> Eliminar Vucem
-                                                </button>
-                                            }
-                                            else
-                                            {
-                                                <!-- Empty div to keep layout if needed, though w-5 is small -->
-                                                <div style="width: 5%;"></div>
-                                            }
+
+                                            <button type="button" class="btn btn-outline-danger btn-sm w-5 py-0 mt-0" style="font-size: 0.70rem; height: 24px;"
+                                                    @onclick="@(() => EliminarRegistroBoton(doc))"
+                                                    disabled="@(SoloLectura)">
+                                                <i class="bi bi-trash"></i> Eliminar Vucem
+                                            </button>
 
                                         </div>
                                     </div>

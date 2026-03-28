@@ -25,24 +25,34 @@
                 <button type="button" class="btn btn-light btn-sm fw-bold text-primary shadow-sm me-2" @onclick="AbrirModalProforma">
                     <i class="bi bi-file-pdf-fill"></i> LEER PROFORMA PEDIMENTO
                 </button>
-                <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="GuardarTodo">
-                    <i class="bi bi-floppy-fill"></i> GUARDAR
-                </button>
-                @* NUEVO BOTÓN: TRANSMITIR A VUCEM *@
-                @if (Id.HasValue && ProgresoExpediente == 100 && manifestacion.EstadoEnvio != "ENVIADO")
+                @if (manifestacion.EstadoEnvio != "ENVIADO")
                 {
-                    <button class="btn btn-success btn-sm fw-bold shadow-sm ms-2 fade-in" @onclick="TransmitirExpedienteVucem">
-                        <i class="bi bi-cloud-arrow-up-fill"></i> TRANSMITIR A VUCEM
-                    </button>
+                    <AuthorizeView Policy="EditarExpediente">
+                        <Authorized>
+                            <button class="btn btn-light btn-sm fw-bold text-primary shadow-sm" @onclick="GuardarTodo">
+                                <i class="bi bi-floppy-fill"></i> GUARDAR
+                            </button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+                 @if (manifestacion.EstadoEnvio != "ENVIADO")
+                {
+                    <AuthorizeView Policy="TransmitirVucem">
+                        <Authorized>
+                            <button class="btn btn-success btn-sm fw-bold shadow-sm me-2" @onclick="TransmitirExpedienteVucem">
+                                <i class="bi bi-cloud-arrow-up-fill"></i> TRANSMITIR A VUCEM
+                            </button>
+                        </Authorized>
+                    </AuthorizeView>
                 }
 
                 @* ETIQUETA SI YA ESTÁ ENVIADO *@
-                @if (manifestacion.EstadoEnvio == "ENVIADO" || manifestacion.EstadoEnvio == "COMPLETO")
+                @if (manifestacion.EstadoEnvio == "ENVIADO")
                 {
                     <span class="badge bg-success ms-2 fs-6 shadow-sm"><i class="bi bi-lock-fill"></i> TRANSMITIDO AL SAT</span>
                 }
 
-                @* NUEVA ETIQUETA: NÚMERO DE OPERACIÓN *@
+                @* ETIQUETA: NÚMERO DE OPERACIÓN *@
                 @if (!string.IsNullOrEmpty(manifestacion.NumeroOperacionVucem))
                 {
                     <span class="badge bg-info text-dark ms-2 fs-6 shadow-sm border border-info">
@@ -1418,7 +1428,7 @@
                         if (proformaExtraida.Incrementales.Length > 1) decimal.TryParse(proformaExtraida.Incrementales[1], out incSeguros);
                         if (proformaExtraida.Incrementales.Length > 2) decimal.TryParse(proformaExtraida.Incrementales[2], out incEmbalajes);
                         if (proformaExtraida.Incrementales.Length > 3) decimal.TryParse(proformaExtraida.Incrementales[3], out incOtros);
-                        
+
                         manifestacion.TotalIncrementables = incFletes + incSeguros + incEmbalajes + incOtros;
                     }
 
@@ -1429,7 +1439,7 @@
                         if (proformaExtraida.Decrementables.Length > 1) decimal.TryParse(proformaExtraida.Decrementables[1], out decSeguros);
                         if (proformaExtraida.Decrementables.Length > 2) decimal.TryParse(proformaExtraida.Decrementables[2], out decEmbalajes);
                         if (proformaExtraida.Decrementables.Length > 3) decimal.TryParse(proformaExtraida.Decrementables[3], out decOtros);
-                        
+
                         manifestacion.TotalDecrementables = decFletes + decSeguros + decEmbalajes + decOtros;
                     }
 
@@ -1619,7 +1629,7 @@
             MostrarToast("Nuevo precio pagado agregado", SweetAlertIcon.Success);
         }
 
-       
+
         tempPagado = new() 
         {
             TipoMoneda = "",
@@ -1628,7 +1638,7 @@
             TipoPago = ""
         };
 
-        
+
     }
 
     private void AgregarPorPagar()
@@ -1660,7 +1670,7 @@
         }
         else
         {
-          
+
             coveTemporal.PreciosPorPagar.Add(tempPorPagar);
             MostrarToast("Nuevo precio por pagar agregado", SweetAlertIcon.Success);
         }
@@ -1694,7 +1704,7 @@
 
         if (compensacionEnEdicion != null)
         {
-            
+
             compensacionEnEdicion.Fecha = tempCompen.Fecha;
             compensacionEnEdicion.Motivo = tempCompen.Motivo;
             compensacionEnEdicion.PrestacionMercancia = tempCompen.PrestacionMercancia;
@@ -1706,7 +1716,7 @@
         }
         else
         {
-            
+
             coveTemporal.Compensaciones.Add(tempCompen);
             MostrarToast("Nueva compensación agregada", SweetAlertIcon.Success);
         }
@@ -1799,7 +1809,8 @@
     {
         if (string.IsNullOrEmpty(manifestacion.ReferenciaAdmin))
         {
-            await MostrarToast("Falta el Número de Pedimento.", SweetAlertIcon.Warning); return;
+            manifestacion.ReferenciaAdmin = " ";
+            // await MostrarToast("Falta el Número de Pedimento.", SweetAlertIcon.Warning); return;
         }
         // 2. AUTO-DETECCIÓN DE ESTADO
         // Definimos las reglas para considerar un expediente "TERMINADO"
